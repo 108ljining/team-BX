@@ -335,14 +335,17 @@ addEventListener('beforeunload', () => net && net.leave());
 
 /* ---------- 입력·버튼 ---------- */
 const MOVE = ['arrowup','arrowdown','arrowleft','arrowright','w','a','s','d'];
+// 한글 입력 상태(ㅈㅁㄴㅇ·ㄹ)에서도 동작하도록 글자가 아닌 '키 위치(code)'로 판별
+const CODE = {KeyW:'w',KeyA:'a',KeyS:'s',KeyD:'d',KeyF:'f',Space:' ',ArrowUp:'arrowup',ArrowDown:'arrowdown',ArrowLeft:'arrowleft',ArrowRight:'arrowright'};
+const kname = e => CODE[e.code] || e.key.toLowerCase();
 addEventListener('keydown', e => {
   if(!joined || e.target.tagName === 'INPUT') return;
-  const k = e.key.toLowerCase();
+  const k = kname(e);
   if(k === ' '){ e.preventDefault(); toggleSit(); return; }
   if(k === 'f'){ punch(); return; }
   if(MOVE.includes(k)){ e.preventDefault(); keys[k] = true; target = null; if(me.seat >= 0) standUp(); }
 });
-addEventListener('keyup', e => { delete keys[e.key.toLowerCase()]; });
+addEventListener('keyup', e => { delete keys[kname(e)]; });
 document.addEventListener('click', e => { const b = e.target.closest('button'); if(b && b !== goBtn) b.blur(); });
 
 const ray = new THREE.Raycaster(), plane = new THREE.Plane(new THREE.Vector3(0,1,0), 0), hit = new THREE.Vector3();
