@@ -105,12 +105,12 @@ input[type=color]{width:44px;height:36px;padding:2px;cursor:pointer}
     <button id="viewBtn" title="시점 처음으로" aria-label="시점 초기화">🎥</button>
     <button id="muteBtn" title="효과음 켜기/끄기" aria-label="효과음">🔊</button>
     <button id="hitBtn" hidden>🥊 때리기 (F)</button>
-    <button id="dartBtn" hidden>🎯 다트 던지기 (T)</button>
+    <button id="paperBtn" hidden>🧻 종이 던지기 (T)</button>
     <button id="kickBtn" hidden>🦶 화분 차기 (F)</button>
     <button id="winBtn" hidden>🪟 창문 탈출 (Space)</button>
     <button id="flipBtn" hidden>🙃 책상 엎기 (G)</button>
     <span id="count"></span>
-    <span id="hint">방향키·WASD 이동 · 바닥 클릭 이동 · Space 점프·앉기·눕기 · 공룡 앞 F · 화분 옆 F · 다트판 앞 T · 창문 앞 Space · 책상 옆 G · Enter 채팅 · 드래그로 시점 회전</span>
+    <span id="hint">방향키·WASD 이동 · 바닥 클릭 이동 · Space 점프·앉기·눕기 · 공룡 앞 F · 화분 옆 F · 사진 쪽에서 T · 창문 앞 Space · 책상 옆 G · Enter 채팅 · 드래그로 시점 회전</span>
   </div>
 </div>
 <div id="chat" hidden>
@@ -166,9 +166,9 @@ wallsBack.push(box(26,.25,.45,M(0xb9b5a3),0,.12,-7.8));
 const glassM = M(0xa8d0e4,{emissive:0x5a8aa0,emissiveIntensity:.5});
 const WINS = [-6,6].map(x => { const pane = box(4,2,.1,glassM,x,3,-7.78); wallsBack.push(pane); return {x, pane, hole:null, broken:false, t0:0}; });
 const OZ = 4;                                 // 사무공간을 맵 가운데로 옮기는 값
-box(9,.03,5.2,M(0x8fa89a),0,.015,-3+OZ);       // 책상 구역 러그
+box(21,.03,5.2,M(0x8fa89a),0,.015,-3+OZ);      // 책상 구역 러그
 
-/* 책상 6개: 3개 + 3개, 의자 등을 맞대고 앉음 */
+/* 책상 8개: 4개 + 4개, 의자 등을 맞대고 앉음 */
 /* 모니터 화면: 앉으면 켜지며 흰 바탕에 랜덤 문구 */
 const SCREEN_MSGS = ['집갈래','졸려','일하기싫어'];
 const screens = [];
@@ -191,8 +191,8 @@ function drawScreen(i, idx){
   sc.tex.needsUpdate = true;
 }
 const SEATS = [];
-for(const x of [-6,0,6]){ SEATS.push({x, z:-3.8+OZ, r:Math.PI}); SEATS.push({x, z:-2.2+OZ, r:0}); }
-const DESKS = [], DESK_G = [];
+for(const x of [-9,-3,3,9]){ SEATS.push({x, z:-3.8+OZ, r:Math.PI}); SEATS.push({x, z:-2.2+OZ, r:0}); }
+const DESKS = [], DESK_G = [], BED0 = SEATS.length;   // 자리 번호: 책상 0~7, 침대 8~12
 const wood = M(0xb58a5d), dark = M(0x3d4a52), gray = M(0x59635f);
 SEATS.forEach((s,si) => {
   const f = s.r === 0, Z = z => (f ? -6 - z : z) + OZ;      // 반대편 줄은 z=-3 기준 대칭
@@ -239,31 +239,6 @@ function applyPhotos(v){
   });
 }
 
-/* 다트판 (뒤쪽 벽 오른편) */
-const BOARD = {x:10.2, y:2.8, z:-7.73, R:.8};                          // R: 점수 영역 반지름
-const DART_ORDER = [20,1,18,4,13,6,10,15,2,17,3,19,7,16,8,11,14,9,12,5];
-{
-  const c = document.createElement('canvas'); c.width = c.height = 512; const g = c.getContext('2d'), C = 256, S = 200;
-  g.fillStyle = '#1b1b1b'; g.beginPath(); g.arc(C,C,255,0,7); g.fill();
-  const wedge = (a0,a1,r,col) => { g.fillStyle = col; g.beginPath(); g.moveTo(C,C); g.arc(C,C,r,a0,a1); g.closePath(); g.fill(); };
-  DART_ORDER.forEach((n,i) => {
-    const a0 = (-90 + i*18 - 9)*Math.PI/180, a1 = a0 + 18*Math.PI/180, dark = i % 2 === 0;
-    const ring = dark ? '#c8312f' : '#1f8a4c', single = dark ? '#1b1b1b' : '#efe3c4';
-    wedge(a0,a1,S,ring); wedge(a0,a1,S*.953,single); wedge(a0,a1,S*.629,ring); wedge(a0,a1,S*.582,single);
-    const am = (a0+a1)/2; g.fillStyle = '#f2efe6'; g.font = 'bold 26px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.fillText(n, C + Math.cos(am)*228, C + Math.sin(am)*228);
-  });
-  g.fillStyle = '#1f8a4c'; g.beginPath(); g.arc(C,C,S*.0935,0,7); g.fill();
-  g.fillStyle = '#c8312f'; g.beginPath(); g.arc(C,C,S*.0374,0,7); g.fill();
-  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
-  const W = BOARD.R*512/S;
-  const back = mesh(new THREE.CylinderGeometry(W/2+.04, W/2+.04, .06, 40), M(0x3a2a1c), BOARD.x, BOARD.y, BOARD.z-.04, scene); back.rotation.x = Math.PI/2;
-  const face = new THREE.Mesh(new THREE.PlaneGeometry(W,W), new THREE.MeshBasicMaterial({map:tex, transparent:true}));
-  face.position.set(BOARD.x, BOARD.y, BOARD.z+.002); scene.add(face); wallsBack.push(back, face);
-}
-const aimRing = new THREE.Mesh(new THREE.RingGeometry(.05,.08,28), new THREE.MeshBasicMaterial({color:0xff3b30}));
-aimRing.position.set(BOARD.x, BOARD.y, BOARD.z+.02); aimRing.visible = false; scene.add(aimRing);
-
 /* 화분 4개: 차면 날아가서 굴러다니다가 5초 뒤 제자리에 다시 나타남 */
 const POTS = [], potM = M(0x8a6a4f), leafM = M(0x4f8a5b);
 for(const [x,z] of [[-12,-7],[12,-7],[-12,7],[12,7]]){
@@ -272,8 +247,8 @@ for(const [x,z] of [[-12,-7],[12,-7],[-12,7],[12,7]]){
   mesh(new THREE.SphereGeometry(.8,12,10), leafM, 0,1.3,0, g);
   POTS.push({g, x0:x, z0:z, state:0, t0:0, py:0, lie:0, v:new THREE.Vector3(), spin:new THREE.Vector3()});
 }
-/* 침대 3개 (공룡 반대편 벽) + 누우면 생기는 링거 */
-const BEDS = [-6,0,6].map(x => ({x})), BED_Z0 = 7.3;       // BED_Z0: 누웠을 때 발 위치
+/* 침대 5개 (공룡 반대편 벽) + 누우면 생기는 링거 */
+const BEDS = [-10,-5,0,5,10].map(x => ({x})), BED_Z0 = 7.3;       // BED_Z0: 누웠을 때 발 위치
 const bedWood = M(0x8a6a4f), sheet = M(0xf4f1ea), steel = M(0xc9d0d4,{metalness:.4}), clear = M(0xbfe3f5,{transparent:true,opacity:.7}), fluid = M(0x8ec5e8);
 const ivs = [];
 BEDS.forEach((b,i) => {
@@ -427,14 +402,14 @@ function show(id, isMe, s, x, z, r, moving, t){
     if((s.jump||0) !== e.lastJump){ e.lastJump = s.jump||0; e.jumpT = t; e.jw = s.jw === 1 ? 1 : 0; e.jfrom = {x, z}; e.jBroke = false; }
     if(e.lastHop === undefined) e.lastHop = s.hop||0;
     if((s.hop||0) !== e.lastHop){ e.lastHop = s.hop||0; e.hopT = t; hopSound(.3); }
-    if(e.lastDart === undefined) e.lastDart = s.dart||0;
-    if((s.dart||0) !== e.lastDart){ e.lastDart = s.dart||0; e.punchT = t; throwDart(x, z, +s.du||0, +s.dv||0, .5, false, look(id, s).top); }
+    if(e.lastPaper === undefined) e.lastPaper = s.paper||0;
+    if((s.paper||0) !== e.lastPaper){ e.lastPaper = s.paper||0; e.punchT = t; throwPaper(x, z, Math.min(3, Math.max(0, s.pf|0)), +s.pu||0, +s.pv||0, .5, false); }
     if(e.lastKick === undefined) e.lastKick = s.kick||0;
     if((s.kick||0) !== e.lastKick){ e.lastKick = s.kick||0; e.kickT = t; kickPot(s.kp|0, x, z, .6); }
     if(e.lastFlip === undefined) e.lastFlip = s.flip||0;
     if((s.flip||0) !== e.lastFlip){ e.lastFlip = s.flip||0; const fd = s.fd|0; flipDesk(fd >> 1, fd & 1 ? 1 : -1, .6); }
   }
-  const sitting = s.seat >= 0 && s.seat < 6, lying = s.seat >= 6;
+  const sitting = s.seat >= 0 && s.seat < BED0, lying = s.seat >= BED0;
   if(e.sit === undefined) e.sit = sitting;
   if(sitting && !e.sit) e.typing = startTyping(isMe ? 1 : .3);          // 새로 앉으면 5초간 타자 소리
   else if(!sitting && e.sit){ stopTyping(e.typing); e.typing = null; }
@@ -678,72 +653,66 @@ function kickSound(vol=1){
   c.connect(cg).connect(master); c.start(now); c.stop(now+.14);
 }
 
-/* ---------- 다트: 다트판 앞에서 T → 움직이는 조준점 위치로 던짐, 3발씩 점수 합산 ---------- */
-const darts = [];
-function dartScore(u, v){
-  const r = Math.hypot(u,v);
-  if(r < .0374) return [50,'BULL']; if(r < .0935) return [25,'25']; if(r > 1) return [0,'MISS'];
-  const a = (Math.atan2(u,v)*180/Math.PI + 360) % 360, n = DART_ORDER[Math.floor(((a+9)%360)/18)];
-  if(r > .582 && r < .629) return [n*3,'T'+n];
-  if(r > .953) return [n*2,'D'+n];
-  return [n, String(n)];
+/* ---------- 구긴 종이 던지기: 왼쪽 벽 사진 쪽에서 T → 가장 가까운 사진에 퍽! ---------- */
+const papers = [], paperM = new THREE.MeshStandardMaterial({color:0xf3f1ea, roughness:.95, flatShading:true});
+const paperG = new THREE.IcosahedronGeometry(.14, 0);
+const PHIT = ['퍽!','팍!','명중!','휙~ 퍽!'];
+const paperZone = () => joined && me.seat < 0 && me.jumpT == null && me.x < -5 && me.z > -6.5 && me.z < 7;
+const nearFrame = () => { let b = 0; PHOTO_Z.forEach((z,i) => { if(Math.abs(me.z-z) < Math.abs(me.z-PHOTO_Z[b])) b = i; }); return b; };
+let lastPaperAt = 0;
+function throwPaper(fx, fz, fi, u, v, vol, mine){
+  const m = new THREE.Mesh(paperG, paperM); m.castShadow = true;
+  m.scale.set(.8+Math.random()*.4, .8+Math.random()*.4, .8+Math.random()*.4); m.rotation.set(Math.random()*6, Math.random()*6, 0);
+  scene.add(m); const base = m.scale.clone();
+  const from = new THREE.Vector3(fx, 1.4, fz), to = new THREE.Vector3(-12.6, 2.7 + v*.7, PHOTO_Z[fi] + u*.95);
+  papers.push({m, base, t0:performance.now()/1000, from, to, fi, vol, mine, phase:0, vel:new THREE.Vector3()});
+  while(papers.length > 15){ const p = papers.shift(); scene.remove(p.m); }
+  whooshSound(vol*.6);
 }
-function makeDart(col){
-  const g = new THREE.Group(), bodyM = M(0x8d949a,{metalness:.5,roughness:.4}), flM = M(col);
-  const b = mesh(new THREE.CylinderGeometry(.022,.018,.3,8), bodyM, 0,0,-.12, g); b.rotation.x = Math.PI/2;
-  const tip = mesh(new THREE.ConeGeometry(.012,.09,6), bodyM, 0,0,.07, g); tip.rotation.x = Math.PI/2;
-  for(const rz of [0, Math.PI/2]){ const f = mesh(new THREE.BoxGeometry(.12,.004,.1), flM, 0,0,-.3, g); f.rotation.z = rz; }
-  return g;                                                             // 끝(+z)이 날아가는 방향
-}
-const zone = () => me.x > 8 && me.x < 11.6 && me.z > -5.8 && me.z < -.6;
-const nearBoard = () => joined && me.seat < 0 && me.jumpT == null && zone();
-let aimU = 0, aimV = 0, lastDartAt = 0, dRound = {n:0, sum:0};
-function throwDart(fx, fz, u, v, vol, mine, col){
-  const g = makeDart(col || '#ffd84a'); scene.add(g);
-  const from = new THREE.Vector3(fx, 1.5, fz), to = new THREE.Vector3(BOARD.x + u*BOARD.R, BOARD.y + v*BOARD.R, BOARD.z + .05);
-  darts.push({g, t0:performance.now()/1000, from, to, u, v, vol, mine, done:false});
-  while(darts.length > 9){ const d = darts.shift(); scene.remove(d.g); }
-}
-function dartSound(vol=1){
+function paperSound(vol=1){
   const a = actx; if(!a || muted || !master) return; const now = a.currentTime;
-  const n = a.createBufferSource(); n.buffer = noiseBuf(a,.06,4);
-  const f = a.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1400; f.Q.value = 2;
-  const g = a.createGain(); g.gain.value = .9*vol; n.connect(f).connect(g).connect(master); n.start(now);
+  const n = a.createBufferSource(); n.buffer = noiseBuf(a,.12,3);
+  const f = a.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 900; f.Q.value = .9;
+  const g = a.createGain(); g.gain.value = 1.1*vol; n.connect(f).connect(g).connect(master); n.start(now);
+}
+function whooshSound(vol=1){
+  const a = actx; if(!a || muted || !master) return; const now = a.currentTime;
+  const n = a.createBufferSource(); n.buffer = noiseBuf(a,.25,1.5);
+  const f = a.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 1.5; f.frequency.setValueAtTime(600, now); f.frequency.exponentialRampToValueAtTime(2200, now+.22);
+  const g = a.createGain(); g.gain.value = .35*vol; n.connect(f).connect(g).connect(master); n.start(now);
 }
 const tmpV = new THREE.Vector3();
-function updateDarts(t){
-  aimU = Math.sin(t*1.9)*.95 + Math.sin(t*5.3)*.06; aimV = Math.sin(t*2.6+1.3)*.85 + Math.cos(t*4.7)*.06;   // 조준점은 계속 흔들림
-  const show = nearBoard();
-  aimRing.visible = show && camera.position.z > -7.6;
-  if(show) aimRing.position.set(BOARD.x + aimU*BOARD.R, BOARD.y + aimV*BOARD.R, BOARD.z + .02);
-  darts.forEach(d => {
-    if(d.done) return;
-    const k = Math.min(1, (t - d.t0)/.4), arc = Math.sin(k*Math.PI)*.7;
-    d.g.position.lerpVectors(d.from, d.to, k); d.g.position.y += arc;
-    tmpV.lerpVectors(d.from, d.to, Math.min(1, k+.05)); tmpV.y += Math.sin(Math.min(1,k+.05)*Math.PI)*.7;
-    if(k < 1) d.g.lookAt(tmpV);
-    else {
-      d.done = true; d.g.position.copy(d.to); d.g.rotation.set(0,0,0);
-      const [pts, label] = dartScore(d.u, d.v); dartSound(d.vol);
-      popAt(pts ? label+(label === String(pts) ? '' : ' '+pts) : 'MISS', d.to.x, d.to.y + .5, d.to.z + .3);
-      if(d.mine) myDartScored(pts);
+function updatePapers(dt, t){
+  for(let i = papers.length-1; i >= 0; i--){
+    const p = papers[i], m = p.m, e = t - p.t0;
+    if(p.phase === 0){                                                  // 날아가는 중
+      const k = Math.min(1, e/.45); m.position.lerpVectors(p.from, p.to, k); m.position.y += Math.sin(k*Math.PI)*.9;
+      m.rotation.x += dt*9; m.rotation.y += dt*7;
+      if(k >= 1){
+        p.phase = 1; paperSound(p.vol); frames[p.fi].shake = 1;
+        popAt(PHIT[Math.floor(Math.random()*PHIT.length)], p.to.x + .3, p.to.y + .6, p.to.z);
+        p.vel.set(1.5 + Math.random()*1.5, 1 + Math.random(), (Math.random()-.5)*2);   // 벽에 맞고 튕겨 나옴
+      }
+    } else if(p.phase === 1){                                           // 떨어져서 굴러감
+      p.vel.y -= 9.8*dt; m.position.addScaledVector(p.vel, dt); m.rotation.z += p.vel.x*dt*3;
+      if(m.position.y < .12){ m.position.y = .12; p.vel.y *= -.3; p.vel.x *= .6; p.vel.z *= .6; if(Math.abs(p.vel.y) < .4 && Math.hypot(p.vel.x,p.vel.z) < .15) p.phase = 2; }
+    } else if(e > 10){                                                  // 바닥에 10초쯤 있다가 사라짐
+      const k = Math.max(0, 1 - (e-10)/.5); m.scale.copy(p.base).multiplyScalar(Math.max(.001, k));
+      if(k <= 0){ scene.remove(m); papers.splice(i,1); }
     }
-  });
-}
-function myDartScored(pts){
-  dRound.n++; dRound.sum += pts;
-  if(dRound.n >= 3){
-    const sum = dRound.sum; dRound = {n:0, sum:0};
-    setTimeout(() => { popAt('합계 '+sum+'점!', BOARD.x, BOARD.y + 1.6, BOARD.z + .4); if(net && net.chat) net.chat({id:me.id, name:me.name, text:'🎯 다트 3발 합계 '+sum+'점!'}); }, 500);
   }
+  frames.forEach(f => {                                                 // 맞은 사진은 흔들흔들
+    f.shake = Math.max(0, (f.shake||0) - dt*1.6);
+    const w = Math.sin(t*28)*.07*f.shake; f.pic.rotation.z = w; f.border.rotation.x = -w;
+  });
 }
 function throwMine(){
   const now = performance.now();
-  if(!nearBoard() || now - lastDartAt < 600) return;
-  lastDartAt = now; target = null;
-  const u = +(aimU + (Math.random()-.5)*.08).toFixed(3), v = +(aimV + (Math.random()-.5)*.08).toFixed(3);
-  me.r = Math.atan2(BOARD.x-me.x, BOARD.z-me.z); me.punchT = now/1000; me.dart++; me.du = u; me.dv = v;
-  throwDart(me.x, me.z, u, v, 1, true, look(me.id, me).top); broadcast(true);
+  if(!paperZone() || now - lastPaperAt < 500) return;
+  lastPaperAt = now; target = null;
+  const fi = nearFrame(), u = +((Math.random()-.5)*1.6).toFixed(2), v = +((Math.random()-.5)*1.6).toFixed(2);
+  me.r = Math.atan2(-12.6-me.x, PHOTO_Z[fi]-me.z); me.punchT = now/1000; me.paper++; me.pf = fi; me.pu = u; me.pv = v;
+  throwPaper(me.x, me.z, fi, u, v, 1, true); broadcast(true);
 }
 
 /* ---------- 점프: 걸으면서 Space ---------- */
@@ -795,7 +764,7 @@ function nearDesk(){
   return best;
 }
 function flipNear(){
-  if(!joined || me.jumpT != null || me.seat >= 6) return;
+  if(!joined || me.jumpT != null || me.seat >= BED0) return;
   let i, sgn;
   if(me.seat >= 0){                                                     // 앉아 있으면 내 책상을 벌떡 일어나며 엎음
     i = me.seat; if(DESK_G[i].state) return;
@@ -837,7 +806,7 @@ function thudSound(vol=1){
 
 /* ---------- 상태·네트워크 ---------- */
 const players = {};
-const me = {id:Math.random().toString(36).slice(2,9), name:'', x:0, z:5.4, r:0, seat:-1, lunch:'', msg:'', color:'', bot:'', hcol:'', outfit:0, hair:0, scr:0, hit:0, punchT:-9, ico:'📌', hop:0, hopT:-9, dart:0, du:0, dv:0, kick:0, kp:0, kickT:-9, jump:0, jw:0, jumpT:null, jfrom:null, flip:0, fd:0};
+const me = {id:Math.random().toString(36).slice(2,9), name:'', x:0, z:5.4, r:0, seat:-1, lunch:'', msg:'', color:'', bot:'', hcol:'', outfit:0, hair:0, scr:0, hit:0, punchT:-9, ico:'📌', hop:0, hopT:-9, paper:0, pf:0, pu:0, pv:0, kick:0, kp:0, kickT:-9, jump:0, jw:0, jumpT:null, jfrom:null, flip:0, fd:0};
 let target = null, joined = false, net = null, camX = 0, camZ = 6;
 const keys = {};
 
@@ -925,7 +894,7 @@ chatIn.addEventListener('keydown', e => { if(e.isComposing) return; if(e.key ===
 
 let lastSent = '', lastT = 0;
 function broadcast(force){
-  const d = {name:me.name, x:+me.x.toFixed(2), z:+me.z.toFixed(2), r:+me.r.toFixed(2), seat:me.seat, lunch:me.lunch, msg:me.msg, color:me.color, bot:me.bot, hcol:me.hcol, outfit:me.outfit, hair:me.hair, scr:me.scr, hit:me.hit, ico:me.ico, hop:me.hop, dart:me.dart, du:me.du, dv:me.dv, kick:me.kick, kp:me.kp, jump:me.jump, jw:me.jw, flip:me.flip, fd:me.fd};
+  const d = {name:me.name, x:+me.x.toFixed(2), z:+me.z.toFixed(2), r:+me.r.toFixed(2), seat:me.seat, lunch:me.lunch, msg:me.msg, color:me.color, bot:me.bot, hcol:me.hcol, outfit:me.outfit, hair:me.hair, scr:me.scr, hit:me.hit, ico:me.ico, hop:me.hop, paper:me.paper, pf:me.pf, pu:me.pu, pv:me.pv, kick:me.kick, kp:me.kp, jump:me.jump, jw:me.jw, flip:me.flip, fd:me.fd};
   const s = JSON.stringify(d), now = Date.now();
   if(!force && ((s === lastSent && now-lastT < 5000) || now-lastT < 100)) return;
   lastSent = s; lastT = now; net.send(d);
@@ -1047,7 +1016,7 @@ function punch(){
 hitBtn.onclick = punch;
 const winBtn = $('winBtn'), flipBtn = $('flipBtn'), kickBtn = $('kickBtn');
 kickBtn.onclick = kick;
-const dartBtn = $('dartBtn'); dartBtn.onclick = throwMine;
+const paperBtn = $('paperBtn'); paperBtn.onclick = throwMine;
 /* 사진 붙이기 */
 let photoSlot = 0;
 PHOTO_Z.forEach((_,i) => { const b = document.createElement('button'); b.className = 'chip'; b.textContent = i+1;
@@ -1085,7 +1054,7 @@ $('msgClear').onclick = () => setMsg('');
 msgIn.addEventListener('keydown', e => { if(e.isComposing) return; if(e.key === 'Enter') setMsg(msgIn.value); if(e.key === 'Escape'){ msgIn.value = me.msg; msgIn.blur(); } });
 
 const taken = i => fresh().some(([,p]) => p.seat === i);
-function standUp(){ if(me.seat >= 6){ me.x = BEDS[me.seat-6].x; me.z = 5.4; me.seat = -1; return; } const s = SEATS[me.seat]; me.x = s.x >= 6 ? s.x-3 : s.x+3; me.z = s.z; me.seat = -1; }
+function standUp(){ if(me.seat >= BED0){ me.x = BEDS[me.seat-BED0].x; me.z = 5.4; me.seat = -1; return; } const s = SEATS[me.seat]; me.x = s.x > 0 ? s.x-3 : s.x+3; me.z = s.z; me.seat = -1; }
 function toggleSit(){
   if(me.jumpT != null) return;
   if(me.seat >= 0){ standUp(); return; }
@@ -1096,8 +1065,8 @@ function toggleSit(){
   if(best >= 0){ me.seat = best; me.x = SEATS[best].x; me.z = SEATS[best].z; me.r = SEATS[best].r; target = null; me.scr = Math.floor(Math.random()*SCREEN_MSGS.length); }
   else {                                                   // 의자가 아니면 가까운 침대에 눕기
     let bb = -1, bdd = 3.4;
-    BEDS.forEach((b,i) => { const d = Math.hypot(b.x-me.x, 8-me.z); if(d < bdd && !taken(6+i)){ bdd = d; bb = i; } });
-    if(bb >= 0){ me.seat = 6+bb; me.x = BEDS[bb].x; me.z = BED_Z0; me.r = Math.PI; target = null; }
+    BEDS.forEach((b,i) => { const d = Math.hypot(b.x-me.x, 8-me.z); if(d < bdd && !taken(BED0+i)){ bdd = d; bb = i; } });
+    if(bb >= 0){ me.seat = BED0+bb; me.x = BEDS[bb].x; me.z = BED_Z0; me.r = Math.PI; target = null; }
     else hop();                                              // 근처에 앉을 곳이 없으면 점프
   }
 }
@@ -1144,9 +1113,9 @@ function frame(now){
     if(sc.state !== scr[i]){ sc.state = scr[i]; drawScreen(i, scr[i]); sc.fade = scr[i] >= 0 ? 0 : 1; sc.mat.color.setScalar(sc.fade); }
     if(sc.fade < 1){ sc.fade = Math.min(1, sc.fade + dt/.4); sc.mat.color.setScalar(sc.fade); }   // 켜질 때 서서히 밝아짐
   });
-  const bedOcc = [false,false,false];
-  for(const [,p] of fresh()) if(p.seat >= 6 && p.seat <= 8) bedOcc[p.seat-6] = true;
-  if(joined && me.seat >= 6) bedOcc[me.seat-6] = true;
+  const bedOcc = BEDS.map(() => false);
+  for(const [,p] of fresh()) if(p.seat >= BED0 && p.seat < BED0+BEDS.length) bedOcc[p.seat-BED0] = true;
+  if(joined && me.seat >= BED0) bedOcc[me.seat-BED0] = true;
   ivs.forEach((iv,i) => {                                  // 누우면 링거가 스르륵 나타남
     iv.k = Math.min(1, Math.max(0, iv.k + (bedOcc[i] ? 1 : -1)*dt/.35));
     iv.g.visible = iv.k > 0; iv.g.scale.setScalar(Math.max(.01, iv.k));
@@ -1160,16 +1129,14 @@ function frame(now){
   const near = joined && me.seat < 0 && nearDino();
   if(hitBtn.hidden === near) hitBtn.hidden = !near;
   const free = joined && me.seat < 0 && me.jumpT == null, nw = free && nearWin() >= 0;
-  const nd = (free && nearDesk() >= 0) || (joined && me.seat >= 0 && me.seat < 6 && !DESK_G[me.seat].state);
+  const nd = (free && nearDesk() >= 0) || (joined && me.seat >= 0 && me.seat < BED0 && !DESK_G[me.seat].state);
   if(winBtn.hidden === nw) winBtn.hidden = !nw;
   if(flipBtn.hidden === nd) flipBtn.hidden = !nd;
   const nk = free && nearPot() >= 0;
   if(kickBtn.hidden === nk) kickBtn.hidden = !nk;
-  const nb = nearBoard();
-  if(dartBtn.hidden === nb) dartBtn.hidden = !nb;
-  const dl = '🎯 다트 던지기 (T)' + (dRound.n ? ` · ${dRound.n}/3발 ${dRound.sum}점` : '');
-  if(dartBtn.textContent !== dl) dartBtn.textContent = dl;
-  updateDesks(t); updatePots(dt, t); updateDarts(t);
+  const np = paperZone();
+  if(paperBtn.hidden === np) paperBtn.hidden = !np;
+  updateDesks(t); updatePots(dt, t); updatePapers(dt, t);
   const fx = joined ? me.x*.7 : 0, fz = joined ? me.z : 2;
   camX += (fx-camX)*Math.min(1,dt*4); camZ += (fz-camZ)*Math.min(1,dt*4);
   const D = 16.3, ce = Math.cos(camPitch), sy = Math.sin(camYaw), cy = Math.cos(camYaw);
