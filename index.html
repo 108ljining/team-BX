@@ -841,7 +841,9 @@ async function initNet(){
       err => { console.error(err); sysChat('채팅을 불러올 수 없어요. Realtime Database 규칙을 게시했는지 확인해 주세요.'); });
     let warned = false;
     return {
-      send: d => D.set(mine, d).catch(err => { console.error(err); if(!warned){ warned = true; sysChat('내 정보가 저장되지 않아요. Realtime Database 규칙을 다시 게시해 주세요.'); } }),
+      send: d => D.set(mine, d)
+        .then(() => { if(warned){ warned = false; sysChat('✅ 다시 정상적으로 저장되고 있어요.'); } })
+        .catch(err => { console.error(err); if(!warned){ warned = true; sysChat('내 정보가 저장되지 않아요. Realtime Database 규칙을 최신 파일로 게시한 뒤 새로고침해 주세요.'); } }),
       leave: () => D.remove(mine),
       chat: m => D.push(chatRef, {...m, t: D.serverTimestamp()}).then(prune).catch(err => { console.error(err); sysChat('채팅 전송 실패: Realtime Database 규칙을 다시 게시해 주세요.'); }),
       prune,
