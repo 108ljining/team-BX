@@ -466,6 +466,7 @@ function show(id, isMe, s, x, z, r, moving, t){
   else if(!sitting && e.sit){ stopTyping(e.typing); e.typing = null; }
   e.sit = sitting;
   pose(e, sitting, moving, t, (t - (e.punchT ?? -9))/.4, lying);
+  e.rig.rotation.z = 0;                                                 // 춤추며 기울었던 몸을 매 프레임 바로 세움
   e.limbs.legL.rotation.z = e.limbs.legR.rotation.z = 0;
   const down = !sitting && !lying && fallFx(e, t);
   if(!sitting && !lying && !down) hopFx(e, t);
