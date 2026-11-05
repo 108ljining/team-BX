@@ -29,7 +29,16 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center;background:rgba(43,45,42,.9);padding:8px 12px;border-radius:12px;font-size:14px}
 #hint{font-size:12px;opacity:.65}
 #msgIn{width:min(240px,46vw)}
-#icoSel{font:inherit;font-size:18px;padding:5px 4px;border-radius:8px;border:1px solid #55594f;background:#2b2d2a;color:var(--ink);cursor:pointer}
+#icoBtn{font-size:20px;padding:4px 8px;line-height:1.2}
+#emojiPanel{flex-direction:column;align-items:stretch;gap:8px;width:min(520px,calc(100vw - 24px))}
+#emojiTabs{display:flex;gap:4px;flex-wrap:wrap;justify-content:center}
+#emojiTabs button{padding:4px 8px;font-size:18px}
+#emojiTabs button.on{border-color:var(--accent);background:#4a5a4d}
+#emojiGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(38px,1fr));gap:2px;max-height:min(30vh,220px);overflow-y:auto}
+#emojiGrid button{font-size:22px;padding:4px 0;border:0;background:transparent;border-radius:6px}
+#emojiGrid button:hover{background:#4a4f47}
+#emojiOwn{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center;font-size:12px;opacity:.85}
+#emojiIn{width:70px;font-size:18px;text-align:center}
 button{font:inherit;color:var(--ink);background:var(--panel);border:1px solid #55594f;border-radius:8px;padding:8px 14px;cursor:pointer}
 button:hover{border-color:var(--accent)}
 button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -65,6 +74,11 @@ input[type=color]{width:44px;height:36px;padding:2px;cursor:pointer}
 <canvas id="c"></canvas>
 <div id="labels"></div>
 <div id="ui">
+  <div class="row" id="emojiPanel" hidden>
+    <div id="emojiTabs"></div>
+    <div id="emojiGrid"></div>
+    <div id="emojiOwn"><span>목록에 없으면 직접 입력</span><input id="emojiIn" maxlength="16" placeholder="😀" autocomplete="off"><button id="emojiOk">적용</button><span>(Windows: Win + . / Mac: Ctrl + Cmd + Space)</span></div>
+  </div>
   <div class="row" id="photoPanel" hidden>
     <span class="lbl">액자</span><span class="chips" id="slotGroup"></span>
     <button id="photoPick">📷 사진 고르기</button>
@@ -92,7 +106,7 @@ input[type=color]{width:44px;height:36px;padding:2px;cursor:pointer}
     <div class="grp"><input id="nameIn" maxlength="8" placeholder="닉네임 (8자)" autocomplete="off" size="9"><button id="nameOk">이름 바꾸기</button><button id="lookReset">기본값</button></div>
   </div>
   <div class="row" id="msgRow">
-    <select id="icoSel" aria-label="상태 아이콘"></select>
+    <button id="icoBtn" title="상태 아이콘 고르기" aria-label="상태 아이콘 고르기">📌</button>
     <input id="msgIn" maxlength="24" placeholder="상태메세지 (계속 표시, 24자)" autocomplete="off" size="24">
     <button id="msgOk">설정</button>
     <button id="msgClear">지우기</button>
@@ -203,8 +217,11 @@ SEATS.forEach((s,si) => {
   box(3,.15,1.6,wood,0,1.2,0,dk); box(.12,1.2,1.4,wood,-1.4,.6,0,dk); box(.12,1.2,1.4,wood,1.4,.6,0,dk);
   box(1.2,.75,.07,dark,0,1.95,L(-5.45),dk); makeScreen(si, 0, L(-5.45) + (f ? -.045 : .045), f, dk); box(.15,.35,.15,gray,0,1.4,L(-5.4),dk); box(.9,.05,.3,gray,0,1.3,L(-4.8),dk);
   DESK_G[si] = {pivot, dk, x:s.x, zc, state:0, t0:0, sgn:1, landed:false};
-  box(.9,.12,.9,gray,s.x,.7,s.z); box(.9,.9,.1,gray,s.x,1.25,s.z + (f?-.45:.45));
-  const p = new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,.65), gray); p.position.set(s.x,.35,s.z); scene.add(p);
+  const bd = f ? -1 : 1;                                              // 의자 등받이 쪽 (책상 반대쪽)
+  const chair = new THREE.Group(); chair.position.set(s.x,0,s.z + bd*.45); scene.add(chair);   // 등받이 아래 모서리를 축으로 뒤로 넘어감
+  box(.9,.12,.9,gray,0,.7,-bd*.45,chair); box(.9,.9,.1,gray,0,1.25,0,chair);
+  const p = new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,.65), gray); p.position.set(0,.35,-bd*.45); chair.add(p);
+  DESK_G[si].chair = chair; DESK_G[si].cbd = bd;
   DESKS.push({x1:s.x-1.5, x2:s.x+1.5, z1:zc-.8, z2:zc+.8});
 });
 /* 사진 액자 4개 (왼쪽 벽): 누구나 사진을 붙이면 모두에게 보임 */
@@ -397,10 +414,12 @@ function show(id, isMe, s, x, z, r, moving, t){
   e.seen = true; e.g.position.set(x,0,z); e.g.rotation.y = r;
   if(isMe) e.punchT = s.punchT;
   else { if(e.lastHit === undefined) e.lastHit = s.hit||0; if((s.hit||0) !== e.lastHit){ e.lastHit = s.hit||0; e.punchT = t; dinoHit(.5); } }
-  if(isMe){ e.jumpT = s.jumpT; e.jw = s.jw; e.jfrom = s.jfrom; e.kickT = s.kickT; e.hopT = s.hopT; }
+  if(isMe){ e.jumpT = s.jumpT; e.jw = s.jw; e.jfrom = s.jfrom; e.kickT = s.kickT; e.hopT = s.hopT; e.fallT = s.fallT; }
   else {
     if(e.lastJump === undefined) e.lastJump = s.jump||0;
     if((s.jump||0) !== e.lastJump){ e.lastJump = s.jump||0; e.jumpT = t; e.jw = s.jw === 1 ? 1 : 0; e.jfrom = {x, z}; e.jBroke = false; }
+    if(e.lastFall === undefined) e.lastFall = s.fall||0;
+    if((s.fall||0) !== e.lastFall){ e.lastFall = s.fall||0; e.fallT = t; }
     if(e.lastHop === undefined) e.lastHop = s.hop||0;
     if((s.hop||0) !== e.lastHop){ e.lastHop = s.hop||0; e.hopT = t; hopSound(.3); }
     if(e.lastPaper === undefined) e.lastPaper = s.paper||0;
@@ -416,7 +435,9 @@ function show(id, isMe, s, x, z, r, moving, t){
   else if(!sitting && e.sit){ stopTyping(e.typing); e.typing = null; }
   e.sit = sitting;
   pose(e, sitting, moving, t, (t - (e.punchT ?? -9))/.4, lying);
-  if(!sitting && !lying) hopFx(e, t);
+  e.limbs.legL.rotation.z = e.limbs.legR.rotation.z = 0;
+  const down = !sitting && !lying && fallFx(e, t);
+  if(!sitting && !lying && !down) hopFx(e, t);
   const kph = (t - (e.kickT ?? -9))/.35;                                // 화분 차는 발차기
   if(kph >= 0 && kph <= 1 && !sitting && !lying){ const k = Math.sin(kph*Math.PI); e.limbs.legR.rotation.x = -k*1.5; e.limbs.shinR.rotation.x = k*.15; e.limbs.legL.rotation.x = k*.2; }
   if(e.n !== s.name){ e.n = s.name; e.nm.textContent = s.name; }
@@ -427,10 +448,10 @@ function show(id, isMe, s, x, z, r, moving, t){
   if(e.bc !== lk.bot){ e.bc = lk.bot; e.botM.color.set(lk.bot); }
   if(e.hc !== lk.hcol){ e.hc = lk.hcol; e.hairM.color.set(lk.hcol); }
   rageFx(e, t);
-  setFace(e, lying ? 'sleep' : (e.rage > .12 ? 'angry' : 'normal'));  // 누우면 눈 감기, 때리면 화난 얼굴
+  setFace(e, (lying || down) ? 'sleep' : (e.rage > .12 ? 'angry' : 'normal'));  // 누우면 눈 감기, 때리면 화난 얼굴
   const lunch = s.lunch || '', msg = s.msg || '';
   if(e.l !== lunch){ e.l = lunch; e.lc.textContent = lunch ? '점심 '+lunch : ''; e.lc.style.display = lunch ? 'block' : 'none'; }
-  const ico = ICONS.includes(s.ico) ? s.ico : ICONS[0];
+  const ico = isEmoji(s.ic) ? s.ic : isEmoji(s.ico) ? s.ico : '📌';
   if(e.m !== msg || e.ico !== ico){ e.m = msg; e.ico = ico; e.bb.textContent = ico+' '+msg; e.bb.style.display = msg ? 'block' : 'none'; }
   const cbOn = (e.cbUntil||0) > performance.now();                      // 채팅 말풍선은 5초만 표시
   if(e.cbOn !== cbOn){ e.cbOn = cbOn; e.cb.style.display = cbOn ? 'block' : 'none'; }
@@ -597,7 +618,7 @@ function updateGlass(dt, t, wallOn){
 }
 const nearWin = () => WINS.findIndex(w => me.z < -5.6 && Math.abs(me.x - w.x) < 2.2);
 function jumpOut(){
-  const wi = nearWin(); if(wi < 0 || me.jumpT != null) return false;
+  const wi = nearWin(); if(wi < 0 || busy()) return false;
   me.jumpT = performance.now()/1000; me.jw = wi; me.jfrom = {x:me.x, z:me.z}; me.jump++; target = null;
   for(const k in keys) delete keys[k];
   broadcast(true); return true;
@@ -637,7 +658,7 @@ const nearPot = () => POTS.findIndex(p => !p.state && Math.hypot(me.x-p.g.positi
 let lastKickAt = 0;
 function kick(){
   const now = performance.now(), i = nearPot();
-  if(!joined || me.seat >= 0 || me.jumpT != null || i < 0 || now-lastKickAt < 400) return false;
+  if(!joined || me.seat >= 0 || busy() || i < 0 || now-lastKickAt < 400) return false;
   lastKickAt = now; const p = POTS[i]; target = null;
   me.r = Math.atan2(p.g.position.x-me.x, p.g.position.z-me.z); me.kick++; me.kp = i; me.kickT = now/1000;
   kickPot(i, me.x, me.z); broadcast(true); return true;
@@ -658,7 +679,7 @@ function kickSound(vol=1){
 const papers = [], paperM = new THREE.MeshStandardMaterial({color:0xf3f1ea, roughness:.95, flatShading:true});
 const paperG = new THREE.IcosahedronGeometry(.14, 0);
 const PHIT = ['퍽!','팍!','명중!','휙~ 퍽!'];
-const paperZone = () => joined && me.seat < 0 && me.jumpT == null && me.x < -7 && me.z > -4.5 && me.z < 12;
+const paperZone = () => joined && me.seat < 0 && !busy() && me.x < -7 && me.z > -4.5 && me.z < 12;
 const nearFrame = () => { let b = 0; PHOTO_Z.forEach((z,i) => { if(Math.abs(me.z-z) < Math.abs(me.z-PHOTO_Z[b])) b = i; }); return b; };
 let lastPaperAt = 0;
 function throwPaper(fx, fz, fi, u, v, vol, mine){
@@ -720,7 +741,7 @@ function throwMine(){
 const HOP_DUR = .55;
 function hop(){
   const t = performance.now()/1000;
-  if(!joined || me.seat >= 0 || me.jumpT != null || t - me.hopT < HOP_DUR) return;   // 착지한 뒤에 다음 점프
+  if(!joined || me.seat >= 0 || busy() || t - me.hopT < HOP_DUR) return;   // 착지한 뒤에 다음 점프
   me.hopT = t; me.hop++; hopSound(1); broadcast(true);
 }
 function hopSound(vol=1){
@@ -739,9 +760,35 @@ function hopFx(e, t){
   L.armL.rotation.x = L.armR.rotation.x = -k*2.4; L.armL.rotation.z = -k*.3; L.armR.rotation.z = k*.3; // 만세
 }
 
+/* ---------- 꽈당: 앉아 있던 책상이 엎어지면 의자와 함께 뒤로 넘어졌다가 일어남 ---------- */
+const FALL_DUR = 2.6;
+const falling = () => performance.now()/1000 - me.fallT < FALL_DUR;
+const busy = () => me.jumpT != null || falling();
+function knockDown(i){
+  const s = SEATS[i], bd = Math.sign(s.z - DESK_G[i].zc);
+  me.seat = -1; me.x = s.x; me.z = s.z + bd*.3; me.r = s.r; target = null;
+  for(const k in keys) delete keys[k];
+  me.fallT = performance.now()/1000; me.fall++; broadcast(true);
+}
+function fallFx(e, t){
+  const ph = t - (e.fallT ?? -99);
+  if(ph < 0 || ph > FALL_DUR) return false;
+  if(!e.fellPop || e.fellPop !== e.fallT){ e.fellPop = e.fallT; setTimeout(() => { thudSound(.8); popAt('꽈당!', e.g.position.x, 2.2, e.g.position.z); }, 300); }
+  let k = ph < .38 ? ph/.38 : ph > FALL_DUR-.5 ? (FALL_DUR-ph)/.5 : 1;
+  k = k*k*(3-2*k);
+  const L = e.limbs, rp = e.rig.position;
+  e.rig.rotation.x = -Math.PI/2*k;                                      // 뒤로 벌러덩
+  rp.y = .21*(1-k) + .34*k + (ph > .38 && ph < .62 ? Math.sin((ph-.38)/.24*Math.PI)*.12 : 0); rp.z = 0;   // 바닥에 한 번 튕김
+  L.legL.rotation.x = L.legR.rotation.x = -Math.PI/2*(1-k) - .25*k; L.shinL.rotation.x = L.shinR.rotation.x = Math.PI/2*(1-k);
+  L.armL.rotation.x = L.armR.rotation.x = -.4*k; L.armL.rotation.z = -1.2*k; L.armR.rotation.z = 1.2*k;   // 대자로 뻗음
+  L.legL.rotation.z = -.25*k; L.legR.rotation.z = .25*k;
+  return true;
+}
+
 /* ---------- 책상 엎기: 책상 옆에서 G → 반대쪽으로 쾅 넘어지고 6초 뒤 제자리 ---------- */
 function flipDesk(i, sgn, vol=1){
   const d = DESK_G[i]; if(!d || d.state) return;
+  if(joined && me.seat === i) knockDown(i);                             // 그 책상에 앉아 있던 사람은 바닥에 꽈당
   d.state = 1; d.sgn = sgn; d.t0 = performance.now()/1000; d.landed = false; d.vol = vol;
   d.pivot.position.z = d.zc + sgn*.8; d.dk.position.z = -sgn*.8;      // 넘어지는 쪽 모서리를 축으로
 }
@@ -755,21 +802,22 @@ function updateDesks(t){
     else if(e < 7.3){ const p = (e-6.5)/.8; a = 1 - p*p*(3-2*p); }
     else { a = 0; d.state = 0; }
     d.pivot.rotation.x = d.sgn*a*1.62;
+    d.chair.rotation.x = d.cbd*Math.min(1, a*1.15)*1.42;                  // 의자도 같이 뒤로 꽈당
   });
 }
 const seatUsed = i => taken(i) || me.seat === i;
 function nearDesk(){
   let best = -1, bd = 1;
   DESK_G.forEach((d,i) => { const dx = Math.max(Math.abs(me.x-d.x)-1.5,0), dz = Math.max(Math.abs(me.z-d.zc)-.8,0), dd = Math.hypot(dx,dz);
-    if(dd < bd && !d.state && !seatUsed(i)){ bd = dd; best = i; } });
+    if(dd < bd && !d.state){ bd = dd; best = i; } });
   return best;
 }
 function flipNear(){
-  if(!joined || me.jumpT != null || me.seat >= BED0) return;
+  if(!joined || busy() || me.seat >= BED0) return;
   let i, sgn;
   if(me.seat >= 0){                                                     // 앉아 있으면 내 책상을 벌떡 일어나며 엎음
     i = me.seat; if(DESK_G[i].state) return;
-    sgn = SEATS[i].z < DESK_G[i].zc ? 1 : -1; standUp();
+    sgn = SEATS[i].z < DESK_G[i].zc ? 1 : -1;                            // 앉은 채로 엎으면 나도 같이 꽈당
   } else {
     i = nearDesk(); if(i < 0) return;
     sgn = me.z < DESK_G[i].zc ? 1 : -1;                                 // 내 반대쪽으로 넘어감
@@ -807,7 +855,7 @@ function thudSound(vol=1){
 
 /* ---------- 상태·네트워크 ---------- */
 const players = {};
-const me = {id:Math.random().toString(36).slice(2,9), name:'', x:0, z:10.5, r:0, seat:-1, lunch:'', msg:'', color:'', bot:'', hcol:'', outfit:0, hair:0, scr:0, hit:0, punchT:-9, ico:'📌', hop:0, hopT:-9, paper:0, pf:0, pu:0, pv:0, kick:0, kp:0, kickT:-9, jump:0, jw:0, jumpT:null, jfrom:null, flip:0, fd:0};
+const me = {id:Math.random().toString(36).slice(2,9), name:'', x:0, z:10.5, r:0, seat:-1, lunch:'', msg:'', color:'', bot:'', hcol:'', outfit:0, hair:0, scr:0, hit:0, punchT:-9, ico:'📌', hop:0, hopT:-9, fall:0, fallT:-99, paper:0, pf:0, pu:0, pv:0, kick:0, kp:0, kickT:-9, jump:0, jw:0, jumpT:null, jfrom:null, flip:0, fd:0};
 let target = null, joined = false, net = null, camX = 0, camZ = 8;
 const keys = {};
 
@@ -897,7 +945,7 @@ chatIn.addEventListener('keydown', e => { if(e.isComposing) return; if(e.key ===
 
 let lastSent = '', lastT = 0;
 function broadcast(force){
-  const d = {name:me.name, x:+me.x.toFixed(2), z:+me.z.toFixed(2), r:+me.r.toFixed(2), seat:me.seat, lunch:me.lunch, msg:me.msg, color:me.color, bot:me.bot, hcol:me.hcol, outfit:me.outfit, hair:me.hair, scr:me.scr, hit:me.hit, ico:me.ico, hop:me.hop, paper:me.paper, pf:me.pf, pu:me.pu, pv:me.pv, kick:me.kick, kp:me.kp, jump:me.jump, jw:me.jw, flip:me.flip, fd:me.fd};
+  const d = {name:me.name, x:+me.x.toFixed(2), z:+me.z.toFixed(2), r:+me.r.toFixed(2), seat:me.seat, lunch:me.lunch, msg:me.msg, color:me.color, bot:me.bot, hcol:me.hcol, outfit:me.outfit, hair:me.hair, scr:me.scr, hit:me.hit, ic:me.ico, fall:me.fall, hop:me.hop, paper:me.paper, pf:me.pf, pu:me.pu, pv:me.pv, kick:me.kick, kp:me.kp, jump:me.jump, jw:me.jw, flip:me.flip, fd:me.fd};
   const s = JSON.stringify(d), now = Date.now();
   if(!force && ((s === lastSent && now-lastT < 5000) || now-lastT < 100)) return;
   lastSent = s; lastT = now; net.send(d);
@@ -923,8 +971,8 @@ async function enter(){
     if(sv){ const l1 = look(me.id, sv); me.outfit = l1.outfit; me.hair = l1.hair; for(const k of ['color','bot','hcol']) me[k] = HEX.test(sv[k]||'') ? sv[k] : ''; }
     else { const c = localStorage.getItem('color'); if(HEX.test(c||'')) me.color = c; }
   }catch(e){}
-  try{ const ic = localStorage.getItem('ico'); if(ICONS.includes(ic)) me.ico = ic; }catch(e){}
-  icoSel.value = me.ico;
+  try{ const ic = localStorage.getItem('ico'); if(isEmoji(ic)) me.ico = ic; }catch(e){}
+  icoBtn.textContent = me.ico;
   if(net.prune) setTimeout(net.prune, 1500);                 // 입장할 때 쌓여 있던 옛 메시지 정리
   joined = true; chatLive = true; $('join').style.display = 'none'; $('chat').hidden = false; msgIn.value = me.msg; broadcast(true);
 }
@@ -945,7 +993,7 @@ addEventListener('keydown', e => {
   if(k === 'f'){ if(!kick()) punch(); return; }            // 화분 옆이면 차기, 공룡 앞이면 때리기
   if(k === 'g'){ flipNear(); return; }
   if(k === 't'){ throwMine(); return; }
-  if(MOVE.includes(k)){ e.preventDefault(); if(me.jumpT != null) return; keys[k] = true; target = null; if(me.seat >= 0) standUp(); }
+  if(MOVE.includes(k)){ e.preventDefault(); if(busy()) return; keys[k] = true; target = null; if(me.seat >= 0) standUp(); }
 });
 addEventListener('keyup', e => { delete keys[kname(e)]; });
 document.addEventListener('click', e => { const b = e.target.closest('button'); if(b && b !== goBtn) b.blur(); });
@@ -965,7 +1013,7 @@ cvEl.addEventListener('pointermove', e => {
 cvEl.addEventListener('pointerup', e => {
   if(drag && !drag.moved && joined){
     ray.setFromCamera({x:e.clientX/innerWidth*2-1, y:-(e.clientY/innerHeight)*2+1}, camera);
-    if(me.jumpT == null && ray.ray.intersectPlane(plane, hit)){ target = {x:hit.x, z:hit.z}; if(me.seat >= 0) standUp(); }
+    if(!busy() && ray.ray.intersectPlane(plane, hit)){ target = {x:hit.x, z:hit.z}; if(me.seat >= 0) standUp(); }
   }
   drag = null;
 });
@@ -974,7 +1022,7 @@ $('viewBtn').onclick = () => { camYaw = 0; camPitch = PITCH0; };
 const lp = $('lunchPanel'), msgIn = $('msgIn');
 const sp = $('stylePanel'), nameIn = $('nameIn');
 const pp = $('photoPanel');
-function closePanels(){ lp.hidden = sp.hidden = pp.hidden = true; }
+function closePanels(){ lp.hidden = sp.hidden = pp.hidden = $('emojiPanel').hidden = true; }
 function openPanel(p){ const open = p.hidden; closePanels(); p.hidden = !open; if(!p.hidden && p === sp) syncStyle(); }
 $('sit').onclick = () => joined && toggleSit();
 $('lunchBtn').onclick = () => joined && openPanel(lp);
@@ -1012,7 +1060,7 @@ const hitBtn = $('hitBtn'); let lastHitAt = 0;
 const nearDino = () => Math.hypot(me.x-DINO.x, me.z-DINO.z) < 3.8;
 function punch(){
   const now = performance.now();
-  if(!joined || me.seat >= 0 || me.jumpT != null || !nearDino() || now-lastHitAt < 350) return;
+  if(!joined || me.seat >= 0 || busy() || !nearDino() || now-lastHitAt < 350) return;
   lastHitAt = now; me.r = Math.atan2(DINO.x-me.x, DINO.z-me.z); target = null;
   me.hit++; me.punchT = now/1000; broadcast(true); dinoHit();
 }
@@ -1047,10 +1095,39 @@ winBtn.onclick = () => joined && toggleSit();
 flipBtn.onclick = flipNear;
 $('muteBtn').onclick = e => { muted = !muted; if(master) master.gain.value = muted ? 0 : 1; e.currentTarget.textContent = muted ? '🔇' : '🔊'; };
 lp.querySelectorAll('button').forEach(b => b.onclick = () => { me.lunch = b.dataset.lunch; broadcast(true); closePanels(); });
-const ICONS = ['📌','💼','☕','🍚','🎧','💻','📞','🏃','😴','🤒','🔥','🎉','✈️','🤫'];
-const icoSel = $('icoSel');
-ICONS.forEach(c => { const o = document.createElement('option'); o.value = o.textContent = c; icoSel.appendChild(o); });
-icoSel.onchange = () => { me.ico = icoSel.value; try{ localStorage.setItem('ico', me.ico); }catch(e){} broadcast(true); icoSel.blur(); };
+/* 상태 아이콘: 전체 이모지 (카테고리 목록 + 직접 입력) */
+const seg = typeof Intl !== 'undefined' && Intl.Segmenter ? new Intl.Segmenter('ko', {granularity:'grapheme'}) : null;
+const graphemes = str => seg ? [...seg.segment(str)].map(x => x.segment) : Array.from(str);
+const EMOJI_RE = /\p{Extended_Pictographic}|\p{Regional_Indicator}/u;
+function isEmoji(v){ return typeof v === 'string' && v.length > 0 && v.length <= 16 && EMOJI_RE.test(v) && graphemes(v).length === 1; }
+const EMOJI_CATS = [
+  ['😀','😀😃😄😁😆😅🤣😂🙂🙃😉😊😇🥰😍🤩😘😗😚😙😋😛😜🤪😝🤑🤗🤭🤫🤔🤐🤨😐😑😶😏😒🙄😬🤥😌😔😪🤤😴😷🤒🤕🤢🤮🤧🥵🥶🥴😵🤯🤠🥳😎🤓🧐😕😟🙁😮😯😲😳🥺😦😧😨😰😥😢😭😱😖😣😞😓😩😫🥱😤😡😠🤬😈👿💀☠️💩🤡👹👺👻👽👾🤖😺😸😹😻😼😽🙀😿😾'],
+  ['👋','👋🤚🖐️✋🖖👌🤌🤏✌️🤞🤟🤘🤙👈👉👆🖕👇☝️👍👎✊👊🤛🤜👏🙌👐🤲🤝🙏✍️💅🤳💪🦾🧠👀👁️👅👄👶🧒👦👧🧑👱👨🧔👩🧓👴👵🙍🙎🙅🙆💁🙋🧏🙇🤦🤷🧑‍💻👨‍💻👩‍💻🧑‍🍳🕵️💂🥷👷🤴👸🦸🦹🧙🧚🧛🧜🧝🧞🧟💆💇🚶🏃💃🕺🧘🛌'],
+  ['❤️','❤️🧡💛💚💙💜🤎🖤🤍💔❣️💕💞💓💗💖💘💝💟💯💢💥💫💦💨🕳️💬💭💤✨⭐🌟⚡🔥🌈☀️⛅☁️🌧️❄️☃️✅❌❗❓⚠️🚫⛔📵🆗🆕🆒🆙🔴🟠🟡🟢🔵🟣⚫⚪'],
+  ['🐶','🐶🐱🐭🐹🐰🦊🐻🐼🐨🐯🦁🐮🐷🐸🐵🙈🙉🙊🐔🐧🐦🐤🦆🦅🦉🦇🐺🐗🐴🦄🐝🐛🦋🐌🐞🐜🐢🐍🦎🦖🦕🐙🦑🦐🦞🦀🐡🐠🐟🐬🐳🐋🦈🐊🐅🐆🦓🦍🐘🦛🦏🐪🦒🦘🐄🐎🐖🐑🦙🐐🦌🐕🐩🐈🐓🦃🦚🦜🦢🕊️🐇🦝🦦🦥🐁🐿️🦔🌵🎄🌲🌳🌴🌱🌿☘️🍀🍁🍂🍃🌷🌹🥀🌺🌸🌼🌻🌞🌝🌚🌙🌏'],
+  ['🍔','🍏🍎🍐🍊🍋🍌🍉🍇🍓🍈🍒🍑🥭🍍🥥🥝🍅🍆🥑🥦🥬🥒🌶️🌽🥕🧄🧅🥔🍠🥐🥯🍞🥖🥨🧀🥚🍳🧈🥞🧇🥓🥩🍗🍖🌭🍔🍟🍕🥪🥙🧆🌮🌯🥗🥘🍝🍜🍲🍛🍣🍱🥟🍤🍙🍚🍘🍥🥠🍢🍡🍧🍨🍦🥧🧁🍰🎂🍮🍭🍬🍫🍿🍩🍪🌰🥜🍯🥛🍼☕🍵🧃🥤🍶🍺🍻🥂🍷🥃🍸🍹🧉🍾🧊'],
+  ['⚽','⚽🏀🏈⚾🥎🎾🏐🏉🥏🎱🏓🏸🏒🥅⛳🏹🎣🥊🥋⛸️🎿🏂🏋️🤸⛹️🤺🤾🏌️🏄🏊🚴🏆🥇🥈🥉🏅🎖️🎫🎪🎭🎨🎬🎤🎧🎼🎹🥁🎷🎺🎸🎻🎲♟️🎯🎳🎮🕹️🧩'],
+  ['✈️','🚗🚕🚌🚎🏎️🚓🚑🚒🚚🚲🛴🛵🏍️🚨🚃🚄🚅✈️🛫🛬🚀🛸🚁⛵🚤🚢⚓🗺️🗽🗼🏰🏯🏟️🎡🎢🏖️🏝️🏕️⛺🏠🏡🏢🏥🏦🏨🏪🏫⛪🌋🗻'],
+  ['💡','⌚📱💻⌨️🖥️🖨️🖱️💾💿📷📸📹🎥📞☎️📺📻⏰⏳⌛📡🔋🔌💡🔦🕯️💸💵💰💳💎⚖️🔧🔨🛠️⛏️🔩⚙️🧱💣🔪🛡️🔮💈🧪🌡️🧹🧺🧻🚽🛁🔑🗝️🚪🛋️🛏️🧸🎁🎈🎏🎀🎊🎉✉️📩📨📧💌📦📫📮📜📃📄📑📊📈📉🗒️📆📅📇🗃️🗳️🗄️📋📁📂🗂️🗞️📰📓📔📒📕📗📘📙📚📖🔖🔗📎🖇️📐📏📌📍✂️🖊️🖋️✒️🖌️🖍️📝✏️🔍🔎🔒🔓']
+];
+const icoBtn = $('icoBtn'), ep = $('emojiPanel'), emojiGrid = $('emojiGrid'), emojiIn = $('emojiIn');
+function setIco(c){
+  if(!isEmoji(c)) return false;
+  me.ico = c; icoBtn.textContent = c; try{ localStorage.setItem('ico', c); }catch(e){}
+  broadcast(true); closePanels(); return true;
+}
+function showCat(ci){
+  [...$('emojiTabs').children].forEach((b,i) => b.classList.toggle('on', i === ci));
+  emojiGrid.textContent = '';
+  graphemes(EMOJI_CATS[ci][1]).forEach(c => { const b = document.createElement('button'); b.textContent = c; b.setAttribute('aria-label', c); b.onclick = () => setIco(c); emojiGrid.appendChild(b); });
+  emojiGrid.scrollTop = 0;
+}
+EMOJI_CATS.forEach(([icon],i) => { const b = document.createElement('button'); b.textContent = icon; b.onclick = () => showCat(i); $('emojiTabs').appendChild(b); });
+showCat(0);
+icoBtn.onclick = () => { if(!joined) return; openPanel(ep); };
+function ownEmoji(){ const g = graphemes(emojiIn.value.trim())[0] || ''; if(setIco(g)) emojiIn.value = ''; else { emojiIn.value = ''; emojiIn.placeholder = '이모지만'; } }
+$('emojiOk').onclick = ownEmoji;
+emojiIn.addEventListener('keydown', e => { if(e.isComposing) return; if(e.key === 'Enter') ownEmoji(); if(e.key === 'Escape') closePanels(); });
 function setMsg(v){ if(!joined) return; me.msg = v.trim().slice(0,24); msgIn.value = me.msg; broadcast(true); msgIn.blur(); }   // 적용 후 입력칸에서 빠져나와 바로 이동 가능
 $('msgOk').onclick = () => setMsg(msgIn.value);
 $('msgClear').onclick = () => setMsg('');
@@ -1059,7 +1136,7 @@ msgIn.addEventListener('keydown', e => { if(e.isComposing) return; if(e.key === 
 const taken = i => fresh().some(([,p]) => p.seat === i);
 function standUp(){ if(me.seat >= BED0){ me.x = BEDS[me.seat-BED0].x; me.z = 13.4; me.seat = -1; return; } const s = SEATS[me.seat]; me.x = s.x > 0 ? s.x-3 : s.x+3; me.z = s.z; me.seat = -1; }
 function toggleSit(){
-  if(me.jumpT != null) return;
+  if(busy()) return;
   if(me.seat >= 0){ standUp(); return; }
   if(jumpOut()) return;                                    // 창문 앞이면 창문 탈출
   if(meMoving){ hop(); return; }                            // 걷는 중이면 점프
@@ -1081,7 +1158,7 @@ function frame(now){
   const dt = Math.min(.05,(now-prev)/1000), t = now/1000; prev = now;
   meMoving = false;
   if(joined && me.jumpT != null && t - me.jumpT > JUMP_DUR) respawn();
-  if(joined && me.seat < 0 && me.jumpT == null){
+  if(joined && me.seat < 0 && !busy()){
     const kx = (keys.arrowright||keys.d?1:0)-(keys.arrowleft||keys.a?1:0);
     const kz = (keys.arrowdown||keys.s?1:0)-(keys.arrowup||keys.w?1:0);
     let dx = 0, dz = 0;
@@ -1129,9 +1206,9 @@ function frame(now){
   dino.rotation.z = Math.sin(t*28)*.07*dinoW;
   dino.scale.set(1+dinoW*.04, 1-dinoW*.06+Math.sin(t*2)*.004, 1);
   placeAt(dinoTag, DINO.x, 5.5, DINO.z);
-  const near = joined && me.seat < 0 && nearDino();
+  const near = joined && me.seat < 0 && !busy() && nearDino();
   if(hitBtn.hidden === near) hitBtn.hidden = !near;
-  const free = joined && me.seat < 0 && me.jumpT == null, nw = free && nearWin() >= 0;
+  const free = joined && me.seat < 0 && !busy(), nw = free && nearWin() >= 0;
   const nd = (free && nearDesk() >= 0) || (joined && me.seat >= 0 && me.seat < BED0 && !DESK_G[me.seat].state);
   if(winBtn.hidden === nw) winBtn.hidden = !nw;
   if(flipBtn.hidden === nd) flipBtn.hidden = !nd;
