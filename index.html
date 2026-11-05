@@ -19,6 +19,7 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:
 #ui{position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;max-width:calc(100% - 20px)}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center;background:rgba(43,45,42,.9);padding:8px 12px;border-radius:12px;font-size:14px}
 #hint{font-size:12px;opacity:.65}
+#msgIn{width:min(260px,52vw)}
 button{font:inherit;color:var(--ink);background:var(--panel);border:1px solid #55594f;border-radius:8px;padding:8px 14px;cursor:pointer}
 button:hover{border-color:var(--accent)}
 button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -48,11 +49,6 @@ input[type=color]{width:44px;height:36px;padding:2px;cursor:pointer}
     <button data-lunch="밖에서 🍜">밖에서 🍜</button>
     <button data-lunch="">선택 지우기</button>
   </div>
-  <div class="row" id="msgPanel" hidden>
-    <input id="msgIn" maxlength="24" placeholder="상태 메시지 (24자)" autocomplete="off">
-    <button id="msgOk">말풍선 띄우기</button>
-    <button id="msgClear">지우기</button>
-  </div>
   <div class="row" id="stylePanel" hidden>
     <input type="color" id="colorIn" title="상의 색 고르기" aria-label="상의 색">
     <input type="range" id="hueIn" min="0" max="360" value="200" aria-label="색상 스펙트럼">
@@ -60,10 +56,14 @@ input[type=color]{width:44px;height:36px;padding:2px;cursor:pointer}
     <input id="nameIn" maxlength="8" placeholder="닉네임 (8자)" autocomplete="off" size="9">
     <button id="nameOk">이름 바꾸기</button>
   </div>
+  <div class="row" id="msgRow">
+    <input id="msgIn" maxlength="24" placeholder="상태 메시지 입력 후 Enter (24자)" autocomplete="off" size="24">
+    <button id="msgOk">띄우기</button>
+    <button id="msgClear">지우기</button>
+  </div>
   <div class="row">
     <button id="sit">앉기·눕기 / 일어나기</button>
     <button id="lunchBtn">점심</button>
-    <button id="msgBtn">상태메세지</button>
     <button id="styleBtn">꾸미기</button>
     <button id="viewBtn" title="시점 처음으로" aria-label="시점 초기화">🎥</button>
     <button id="muteBtn" title="효과음 켜기/끄기" aria-label="효과음">🔊</button>
@@ -339,7 +339,7 @@ async function initNet(){
       for(const id in players) if(!v[id]) delete players[id];
       for(const id in v) merge(id, v[id]);
     });
-    D.onDisconnect(mine).remove();
+    D.onDisconnect(mine).remove(); useStale = false;
     return {send: d => D.set(mine, d), leave: () => D.remove(mine)};
   }
   const ch = new BroadcastChannel('office-demo-3d');
@@ -351,7 +351,10 @@ function merge(id, d){
   const p = players[id] || {rx:d.x, rz:d.z, rr:d.r};
   Object.assign(p, d, {seen:Date.now()}); players[id] = p;
 }
-const fresh = () => Object.entries(players).filter(([,p]) => Date.now()-p.seen < STALE);
+// Firebase는 같은 값을 다시 써도 다른 사람에게 알림이 가지 않아서, 가만히 있는 사람이 '오래됨'으로 사라졌음.
+// Firebase 모드에서는 시간으로 거르지 않고, 접속이 끊기면 서버가 지워 주는(onDisconnect) 것만 믿음.
+let useStale = true;
+const fresh = () => Object.entries(players).filter(([,p]) => !useStale || Date.now()-p.seen < STALE);
 
 let lastSent = '', lastT = 0;
 function broadcast(force){
@@ -417,14 +420,13 @@ cvEl.addEventListener('pointerup', e => {
 });
 cvEl.addEventListener('pointercancel', () => { drag = null; });
 $('viewBtn').onclick = () => { camYaw = 0; camPitch = PITCH0; };
-const lp = $('lunchPanel'), mp = $('msgPanel');
+const lp = $('lunchPanel'), msgIn = $('msgIn');
 const sp = $('stylePanel'), colorIn = $('colorIn'), hueIn = $('hueIn'), nameIn = $('nameIn');
-function closePanels(){ lp.hidden = mp.hidden = sp.hidden = true; }
-function openPanel(p){ const open = p.hidden; closePanels(); p.hidden = !open; if(!p.hidden && p === mp){ $('msgIn').value = me.msg; $('msgIn').focus(); }
+function closePanels(){ lp.hidden = sp.hidden = true; }
+function openPanel(p){ const open = p.hidden; closePanels(); p.hidden = !open;
   if(!p.hidden && p === sp){ nameIn.value = me.name; colorIn.value = me.color || '#'+hue(me.id).getHexString(); } }
 $('sit').onclick = () => joined && toggleSit();
 $('lunchBtn').onclick = () => joined && openPanel(lp);
-$('msgBtn').onclick = () => joined && openPanel(mp);
 $('styleBtn').onclick = () => joined && openPanel(sp);
 function saveColor(){ try{ localStorage.setItem('color', me.color); }catch(e){} }
 colorIn.addEventListener('input', () => { me.color = colorIn.value; saveColor(); });
@@ -444,10 +446,10 @@ function punch(){
 hitBtn.onclick = punch;
 $('muteBtn').onclick = e => { muted = !muted; if(master) master.gain.value = muted ? 0 : 1; e.currentTarget.textContent = muted ? '🔇' : '🔊'; };
 lp.querySelectorAll('button').forEach(b => b.onclick = () => { me.lunch = b.dataset.lunch; broadcast(true); closePanels(); });
-function setMsg(v){ me.msg = v.trim().slice(0,24); broadcast(true); closePanels(); }
-$('msgOk').onclick = () => setMsg($('msgIn').value);
-$('msgClear').onclick = () => { $('msgIn').value = ''; setMsg(''); };
-$('msgIn').addEventListener('keydown', e => { if(e.key === 'Enter') setMsg($('msgIn').value); if(e.key === 'Escape') closePanels(); });
+function setMsg(v){ if(!joined) return; me.msg = v.trim().slice(0,24); msgIn.value = me.msg; broadcast(true); msgIn.blur(); }   // 적용 후 입력칸에서 빠져나와 바로 이동 가능
+$('msgOk').onclick = () => setMsg(msgIn.value);
+$('msgClear').onclick = () => setMsg('');
+msgIn.addEventListener('keydown', e => { if(e.isComposing) return; if(e.key === 'Enter') setMsg(msgIn.value); if(e.key === 'Escape'){ msgIn.value = me.msg; msgIn.blur(); } });
 
 const taken = i => fresh().some(([,p]) => p.seat === i);
 function standUp(){ if(me.seat >= 6){ me.x = BEDS[me.seat-6].x; me.z = 5.4; me.seat = -1; return; } const s = SEATS[me.seat]; me.x = s.x >= 6 ? s.x-3 : s.x+3; me.z = s.z; me.seat = -1; }
