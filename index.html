@@ -72,6 +72,20 @@ input[type=color]{width:44px;height:36px;padding:2px;cursor:pointer}
 .wbBox{background:var(--panel);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px;width:min(940px,100%,calc((100vh - 150px)*1.5))}   /* 화면 높이에 맞춰 3:2 유지 */
 .wbBar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .wbBar .sp{flex:1}
+#ornModal{position:fixed;inset:0;background:rgba(20,22,19,.82);display:flex;align-items:center;justify-content:center;padding:16px;z-index:20}
+.ornBox{background:var(--panel);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:12px;width:min(720px,100%);max-height:calc(100vh - 32px);overflow:auto}
+.ornBody{display:flex;gap:16px;flex-wrap:wrap}
+.ornPrev{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:8px;max-width:100%}
+#ornCv{width:min(280px,78vw);aspect-ratio:1;border-radius:12px;background:radial-gradient(circle at 50% 40%,#2f4a3a,#1a2720);touch-action:none;display:block}
+#ornCv.draw{cursor:crosshair}
+#ornHint{max-width:280px;text-align:center;font-size:12px;opacity:.8}
+.ornSide{flex:1 1 260px;min-width:0;display:flex;flex-direction:column;gap:12px}
+.ornSide .lbl{display:block;margin-bottom:4px}
+.ornSide .chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+#ornTools{display:flex;flex-direction:column;gap:8px;padding:10px;border-radius:10px;background:rgba(255,255,255,.04)}
+#ornMsg{font-size:12px;opacity:.85;min-height:16px}
+.primary{background:var(--accent);color:#17231b;border:0;font-weight:700}
+#ornTip{position:fixed;left:0;top:0;pointer-events:none;background:rgba(43,45,42,.95);border:1px solid #55594f;border-radius:8px;padding:4px 8px;font-size:12px;z-index:12;transform:translate(14px,-130%);white-space:nowrap}
 #wbCanvas{width:100%;aspect-ratio:3/2;background:#fff;border-radius:8px;touch-action:none;cursor:crosshair;display:block}
 #wbColors{display:flex;gap:6px}
 .grp{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center}
@@ -140,13 +154,33 @@ input[type=color]{width:44px;height:36px;padding:2px;cursor:pointer}
     <button id="winBtn" hidden>🪟 창문 탈출 (X)</button>
     <button id="wbBtn" hidden>🖍 화이트보드 (Q)</button>
     <button id="cofBtn" hidden>☕ 커피 내리기 (C)</button>
+    <button id="ornBtn" hidden>🎄 오너먼트 달기 (O)</button>
     <button id="flipBtn" hidden>🙃 책상 엎기 (G)</button>
     <span id="count"></span>
-    <span id="hint">WASD 이동 · Space 점프 · E 앉기·눕기 · F 때리기/차기 · C 커피 · G 책상 엎기 · T 종이 · X 창문 · B 춤 · Q 화이트보드 · Enter 채팅</span>
+    <span id="hint">WASD 이동 · Space 점프 · E 앉기·눕기 · F 때리기/차기 · C 커피 · O 오너먼트 · G 책상 엎기 · T 종이 · X 창문 · B 춤 · Q 화이트보드 · Enter 채팅</span>
   </div>
 </div>
 <div class="toast" id="leaveToast" hidden><span>🌙 6시 30분이에요! 오늘도 수고했어요, 퇴근하세요~</span><button id="leaveClose">닫기</button></div>
 <div class="toast" id="clubTag" hidden>🪩 클럽 모드 ON</div>
+<div id="ornTip" hidden></div>
+<div id="ornModal" hidden><div class="ornBox">
+  <div class="wbBar"><strong>🎄 오너먼트 만들기</strong><span class="sp"></span><button id="ornClose">닫기 ✕</button></div>
+  <div class="ornBody">
+    <div class="ornPrev"><canvas id="ornCv" width="256" height="256"></canvas><span id="ornHint">기본 디자인이에요. 그대로 달아도 되고, 직접 꾸밀 수도 있어요.</span></div>
+    <div class="ornSide">
+      <div><span class="lbl">모양</span><div class="chips" id="ornTypes"></div></div>
+      <div><span class="lbl">색</span><div class="chips" id="ornCols"></div></div>
+      <div><span class="lbl">꾸미기</span><div class="chips"><button class="chip on" id="ornDef">기본 디자인 그대로</button><button class="chip" id="ornDraw">✏️ 직접 그리기·글씨</button></div></div>
+      <div id="ornTools" hidden>
+        <div class="chips" id="ornPens"></div>
+        <div class="chips"><button class="chip on" id="ornThin">가늘게</button><button class="chip" id="ornThick">굵게</button><button class="chip" id="ornErase">지우개</button><button class="chip" id="ornBase">바탕: 기본 디자인</button></div>
+        <div class="chips"><input id="ornText" maxlength="8" placeholder="글씨 (8자)" autocomplete="off" size="10"><button id="ornTextOk">글씨 넣기</button><button id="ornInkClear">그린 것 지우기</button></div>
+      </div>
+      <div class="chips"><button class="primary" id="ornHang">🎄 트리에 달기</button><button id="ornRemove">내 오너먼트 떼기</button></div>
+      <span id="ornMsg"></span>
+    </div>
+  </div>
+</div></div>
 <div id="wbModal" hidden><div class="wbBox">
   <div class="wbBar">
     <strong>🖍 화이트보드</strong><span id="wbColors"></span>
@@ -253,7 +287,7 @@ SEATS.forEach((s,si) => {
   DESKS.push({x1:s.x-1.5, x2:s.x+1.5, z1:zc-.8, z2:zc+.8});
 });
 /* 사진 액자 4개 (왼쪽 벽): 누구나 사진을 붙이면 모두에게 보임 */
-const PHOTO_Z = [-2.5,1.7,5.9,10.1], frames = [], frameM = M(0x6b4f36);
+const PHOTO_Z = [-1.2,2.9,7,11.1,15.2], frames = [], frameM = M(0x6b4f36);
 function drawEmptyPhoto(i){
   const f = frames[i], g = f.c.getContext('2d');
   g.fillStyle = '#ece6d6'; g.fillRect(0,0,480,360);
@@ -287,7 +321,7 @@ function applyPhotos(v){
 
 /* 화분 4개: 차면 날아가서 굴러다니다가 5초 뒤 제자리에 다시 나타남 */
 const POTS = [], potM = M(0x8a6a4f), leafM = M(0x4f8a5b);
-for(const [x,z] of [[-14,-7],[14,-7],[-14,16.8],[14,16.8]]){
+for(const [x,z] of [[-14,-7],[14,-7],[-13.8,17.2],[13.8,17.2]]){
   const g = new THREE.Group(); g.position.set(x,0,z); scene.add(g);
   mesh(new THREE.CylinderGeometry(.45,.35,.7,12), potM, 0,.35,0, g);
   mesh(new THREE.SphereGeometry(.8,12,10), leafM, 0,1.3,0, g);
@@ -312,7 +346,21 @@ BEDS.forEach((b,i) => {
   tube.position.copy(a).add(z).multiplyScalar(.5); tube.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), dir.normalize()); tube.scale.y = len; g.add(tube);
   ivs[i] = {g, drop, k:0};
 });
-const blocked = (x,z) => DESKS.some(d => x>d.x1-.4 && x<d.x2+.4 && z>d.z1-.4 && z<d.z2+.4) || Math.hypot(x-DINO.x, z-DINO.z) < 2.2;
+const rnd = n => { const x = Math.sin(n*127.1 + 311.7)*43758.5453; return x - Math.floor(x); };
+const CIRCLES = [];                                                     // 둥근 장애물 (공룡, 트리)
+const blockedBox = (x,z) => DESKS.some(d => x>d.x1-.4 && x<d.x2+.4 && z>d.z1-.4 && z<d.z2+.4);
+const inCircle = (x,z) => CIRCLES.some(c => Math.hypot(x-c.x, z-c.z) < c.r);
+const blocked = (x,z) => blockedBox(x,z) || inCircle(x,z);
+function pushOut(x, z){                                                 // 둥근 물체에 닿으면 가장자리로 밀어내서 옆으로 미끄러지게
+  for(const c of CIRCLES){ const dx = x-c.x, dz = z-c.z, d = Math.hypot(dx,dz);
+    if(d < c.r){ const k = d > 1e-6 ? (c.r+.002)/d : 0; x = d > 1e-6 ? c.x + dx*k : c.x; z = d > 1e-6 ? c.z + dz*k : c.z + c.r; } }
+  return [x, z];
+}
+function pushOutX(x, z){                                                // 벽에 막혀 앞뒤로 못 피할 때는 옆으로 빼냄 (공룡과 벽 사이 모서리 끼임 방지)
+  for(const c of CIRCLES){ const dz = z-c.z; if(Math.abs(dz) < c.r && Math.hypot(x-c.x, dz) < c.r){
+    x = c.x + (x >= c.x ? 1 : -1)*(Math.sqrt(c.r*c.r - dz*dz) + .002); } }
+  return x;
+}
 
 /* ---------- 사람 (팔·다리 있음) ---------- */
 const labelsEl = $('labels');
@@ -324,7 +372,7 @@ function look(id, s){
   let h = 0; for(const c of id) h = (h*31 + c.charCodeAt(0)) >>> 0;
   const ok = (v,max) => Number.isInteger(v) && v >= 0 && v <= max;
   return {
-    outfit: ok(s.outfit,4) ? s.outfit : h%5,
+    outfit: ok(s.outfit,5) ? s.outfit : h%5,
     hair: ok(s.hair,3) ? s.hair : (h>>>3)%4,
     top: HEX.test(s.color||'') ? s.color : '#'+hue(id).getHexString(),
     bot: HEX.test(s.bot||'') ? s.bot : DEFBOT[(h>>>5)%DEFBOT.length],
@@ -338,7 +386,15 @@ const sph = (r,mat,x,y,z,par,sx=1,sy=1,sz=1) => { const m = mesh(new THREE.Spher
 const cyl = (rt,rb,h,mat,x,y,z,par) => mesh(new THREE.CylinderGeometry(rt,rb,h,18), mat, x,y,z, par);
 const clr = g => { for(const c of [...g.children]){ g.remove(c); if(c.geometry) c.geometry.dispose(); } };
 
-/* 옷 5종: 0 셔츠+바지 · 1 블라우스+무릎치마 · 2 스웨트셔츠+바지 · 3 패딩+바지 · 4 반팔+반바지 */
+/* 환자복용 하늘색 세로 줄무늬 천 */
+const gownTex = (() => {
+  const c = document.createElement('canvas'); c.width = 64; c.height = 8; const g = c.getContext('2d');
+  g.fillStyle = '#eef6fb'; g.fillRect(0,0,64,8);
+  for(let x=0;x<64;x+=16){ g.fillStyle = '#8fbde3'; g.fillRect(x,0,7,8); g.fillStyle = '#6fa2cf'; g.fillRect(x+7,0,1,8); }
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(7,1); t.colorSpace = THREE.SRGBColorSpace; return t;
+})();
+const gownM = new THREE.MeshStandardMaterial({map:gownTex, roughness:.85}), gownDarkM = M(0x5f93c4);
+/* 옷 6종: 0 셔츠+바지 · 1 블라우스+무릎치마 · 2 스웨트셔츠+바지 · 3 패딩+바지 · 4 반팔+반바지 · 5 환자복 */
 function buildOutfit(e, o){
   const tg = e.torsoG, T = e.topM, TD = e.topDarkM, B = e.botM, armC = e.armC, legC = e.legC, shinC = e.shinC;
   [tg, armC.L, armC.R, legC.L, legC.R, shinC.L, shinC.R].forEach(clr);
@@ -361,6 +417,14 @@ function buildOutfit(e, o){
     const col = mesh(new THREE.TorusGeometry(.22,.07,10,20), TD, 0,1.1,0, tg); col.rotation.x = Math.PI/2;
     box(.025,.5,.02,whiteM,0,.99,.358,tg); pants();
     for(const k of 'LR'){ sph(.12,T,0,-.14,0,armC[k],1,1.1,1); sph(.115,T,0,-.37,0,armC[k],1,1.1,1); }
+  } else if(o === 5){                                    // 환자복: 줄무늬 상하의, 파란 깃, 단추, 가슴 주머니
+    const G = gownM, GD = gownDarkM;
+    cyl(.285,.315,.55,G,0,.975,0,tg); cyl(.3,.3,.18,G,0,.69,0,tg);
+    for(const sx of [-1,1]){ const c = mesh(new THREE.BoxGeometry(.17,.045,.09), GD, sx*.095,1.08,.25, tg); c.rotation.set(-.3,0,sx*.75); }   // V넥 깃
+    for(const y of [.8,.9,1]) sph(.022,whiteM,0,y,.305,tg);                                                                                   // 단추
+    const pk = mesh(new THREE.BoxGeometry(.12,.11,.015), G, .14,.93,.27, tg); pk.rotation.y = .48;                                            // 가슴 주머니
+    for(const k of 'LR'){ cyl(.1,.092,.5,G,0,-.25,0,armC[k]); cyl(.098,.098,.05,GD,0,-.47,0,armC[k]);                                       // 넉넉한 소매
+      cyl(.118,.108,.3,G,0,-.15,0,legC[k]); cyl(.108,.1,.3,G,0,-.15,0,shinC[k]); }                                                          // 넉넉한 바지
   } else {                                               // 반팔 + 반바지
     cyl(.27,.3,.51,T,0,.995,0,tg); sph(.05,whiteM,.11,1.06,.285,tg,1,1,.2); cyl(.3,.3,.18,B,0,.69,0,tg);
     for(const k of 'LR'){ cyl(.095,.088,.2,T,0,-.1,0,armC[k]); cyl(.115,.108,.22,B,0,-.11,0,legC[k]); }
@@ -537,7 +601,7 @@ function rageFx(e, t){
 }
 
 /* ---------- 큰 공룡 인형 ---------- */
-const DINO = {x:0, z:-6};
+const DINO = {x:0, z:-6}; CIRCLES.push({x:DINO.x, z:DINO.z, r:2.2});
 const dino = new THREE.Group(); dino.position.set(DINO.x,0,DINO.z); scene.add(dino);
 const dg = M(0x5fae6b), dl = M(0xb5e09a), dd = M(0x3f8a52), dw = M(0xffffff), dp = M(0x222222);
 function ell(rx,ry,rz,mat,x,y,z){ const m = mesh(new THREE.SphereGeometry(1,20,16), mat, x,y,z, dino); m.scale.set(rx,ry,rz); return m; }
@@ -552,6 +616,123 @@ ell(.85,.65,.85,dg,-1.5,1.3,-.7); ell(.6,.45,.6,dg,-2.3,1,-.5); ell(.4,.3,.4,dg,
 for(const [y,z] of [[4.65,-.3],[3.9,-1],[3,-1.3],[2.1,-1.35]]){ const c = mesh(new THREE.ConeGeometry(.3,.65,8), dd, 0,y,z, dino); c.rotation.x = -.6; }
 const restTag = document.createElement('div'); restTag.className = 'tag'; restTag.innerHTML = '<div class="nm">🛏 휴게실</div>'; labelsEl.appendChild(restTag);
 const dinoTag = document.createElement('div'); dinoTag.className = 'tag'; dinoTag.innerHTML = '<div class="nm">🦖 공룡 인형</div>'; labelsEl.appendChild(dinoTag);
+/* ---------- 🎄 크리스마스 트리 (앞쪽 왼편): 천장 닿을 듯한 트리 + 큰 별 + 전구 + 반짝이 장식 + 선물 + 눈 ---------- */
+const TREE = {x:-11, z:-3.6};
+CIRCLES.push({x:TREE.x, z:TREE.z, r:2.75});
+const TIERS = [[.55,1.5,2.0],[1.25,1.35,1.65],[1.9,1.2,1.3],[2.5,1.05,1.0],[3.05,.95,.72],[3.55,.88,.46]];   // [밑 높이, 높이, 반지름]
+const treeR = y => { let r = 0; for(const [b,h,rr] of TIERS) if(y >= b && y <= b+h) r = Math.max(r, rr*(1 - (y-b)/h)); return r; };   // 높이별 트리 바깥 반지름
+const treeG = new THREE.Group(); treeG.position.set(TREE.x, 0, TREE.z); scene.add(treeG);
+const snowM = new THREE.MeshStandardMaterial({color:0xf7fbff, roughness:1, emissive:0x9fb4cc, emissiveIntensity:.12}), blobG = new THREE.SphereGeometry(1, 10, 6);
+{
+  mesh(new THREE.CylinderGeometry(.24,.32,.75,12), M(0x6b4a35), 0,.37,0, treeG);                       // 줄기
+  TIERS.forEach(([b,h,r],ti) => {                                                                      // 가지 층: 가장자리를 들쭉날쭉하게
+    const geo = new THREE.ConeGeometry(r, h, 36, 3), pos = geo.attributes.position;
+    for(let i=0;i<pos.count;i++){ const x = pos.getX(i), z = pos.getZ(i), y = pos.getY(i); if(Math.hypot(x,z) < 1e-4) continue;
+      const a = Math.atan2(z,x), f = 1 + .07*Math.sin(a*7 + ti) + .04*Math.sin(a*13 + ti*2) + (y < -h/2 + .01 ? .05*Math.sin(a*18) : 0);
+      pos.setX(i, x*f); pos.setZ(i, z*f); if(y < -h/2 + .01) pos.setY(i, y - .06*Math.abs(Math.sin(a*9 + ti))); }
+    geo.computeVertexNormals();
+    const cone = mesh(geo, M(new THREE.Color().setHSL(.38, .45, .22 + ti*.012).getHex(), {roughness:.95}), 0, b + h/2, 0, treeG); cone.receiveShadow = true;
+    const n = Math.round(2*Math.PI*r/.36);                                                              // 가지 위에 소복이 쌓인 눈
+    for(let k=0;k<n;k++){ const a = (k + rnd(ti*50+k)*.6)/n*Math.PI*2, rr = r*(.74 + rnd(ti*70+k)*.12), yy = b + h*(1 - rr/r) + .04;
+      const sn = new THREE.Mesh(blobG, snowM); sn.position.set(Math.cos(a)*rr, yy, Math.sin(a)*rr);
+      sn.scale.set(.2 + rnd(k+ti)*.08, .05 + rnd(k*3)*.03, .13); sn.rotation.y = -a; sn.rotation.z = .35; treeG.add(sn); }
+  });
+  const cap = new THREE.Mesh(new THREE.ConeGeometry(.17, .3, 12), snowM); cap.position.y = 4.32; treeG.add(cap);
+  const mound = new THREE.Mesh(new THREE.CylinderGeometry(2.45, 2.65, .1, 40), snowM); mound.position.y = .05; mound.receiveShadow = true; treeG.add(mound);   // 바닥에 쌓인 눈
+  for(let k=0;k<26;k++){ const a = k/26*Math.PI*2 + rnd(k)*.2, rr = 2.35 + rnd(k+5)*.35;
+    const sn = new THREE.Mesh(blobG, snowM); sn.position.set(Math.cos(a)*rr, .07, Math.sin(a)*rr); sn.scale.set(.32 + rnd(k+9)*.25, .1 + rnd(k+2)*.06, .28); treeG.add(sn); }
+}
+// 큰 별
+const starShape = new THREE.Shape();
+for(let k=0;k<10;k++){ const a = Math.PI/2 + k*Math.PI/5, r = k % 2 ? .19 : .45; k ? starShape.lineTo(Math.cos(a)*r, Math.sin(a)*r) : starShape.moveTo(Math.cos(a)*r, Math.sin(a)*r); }
+const starGeo = new THREE.ExtrudeGeometry(starShape, {depth:.12, bevelEnabled:true, bevelThickness:.05, bevelSize:.04, bevelSegments:2}); starGeo.center();
+const starM = new THREE.MeshStandardMaterial({color:0xffd24a, metalness:.55, roughness:.28, emissive:0xffb000, emissiveIntensity:1});
+const treeStar = mesh(starGeo, starM, 0, 4.62, 0, treeG);
+const glowTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
+  const gr = g.createRadialGradient(64,64,0,64,64,64); gr.addColorStop(0,'rgba(255,240,170,1)'); gr.addColorStop(.25,'rgba(255,210,90,.55)'); gr.addColorStop(1,'rgba(255,190,60,0)');
+  g.fillStyle = gr; g.fillRect(0,0,128,128); return new THREE.CanvasTexture(c); })();
+const starGlow = new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex, blending:THREE.AdditiveBlending, depthWrite:false, transparent:true}));
+starGlow.position.set(0, 4.62, 0); starGlow.scale.setScalar(2.4); treeG.add(starGlow);
+// 길게 둘러진 전구 줄
+const BULB_COLS = ['#ffe9b0','#ff4d4d','#5dff7a','#5aa8ff','#ffd23c','#ff7ad9'].map(c => new THREE.Color(c));
+const lightPts = [];
+for(let i=0;i<=600;i++){ const f = i/600, y = .8 + f*3.4, a = f*Math.PI*2*5.5; const r = treeR(y)*.98 + .05; lightPts.push(new THREE.Vector3(Math.cos(a)*r, y, Math.sin(a)*r)); }
+const lightCurve = new THREE.CatmullRomCurve3(lightPts);
+treeG.add(new THREE.Mesh(new THREE.TubeGeometry(lightCurve, 600, .012, 4), M(0x1f3a26)));
+const BULBS = 190, bulbs = new THREE.InstancedMesh(new THREE.SphereGeometry(.055, 8, 6), new THREE.MeshBasicMaterial(), BULBS);
+const bulbPh = [], dummy = new THREE.Object3D();
+for(let i=0;i<BULBS;i++){ dummy.position.copy(lightCurve.getPointAt((i+.5)/BULBS)); dummy.updateMatrix(); bulbs.setMatrixAt(i, dummy.matrix); bulbs.setColorAt(i, BULB_COLS[i % BULB_COLS.length]); bulbPh.push(rnd(i+900)*6.28); }
+treeG.add(bulbs);
+const treeLights = [0xffb85c, 0xff6a6a].map((c,i) => { const l = new THREE.PointLight(c, 4, 7, 1.6); l.position.set(i ? .8 : -.6, 1.4 + i*1.3, i ? .6 : 1.0); treeG.add(l); return l; });
+// 기본으로 달린 반짝이 장식 (새 오너먼트 자리를 위해 띄엄띄엄)
+const ORN_SLOTS = [], DEF_SLOTS = [];
+{
+  const N = 110, top = 4.15, bot = 1.0;
+  for(let i=0;i<N;i++){ const y = top - (top - bot)*Math.sqrt((i + .5)/N), a = i*2.39996 + .4, r = treeR(Math.max(.6, y - .2)) + .07;
+    const slot = {y, a, r, x:Math.cos(a)*r, z:Math.sin(a)*r};
+    (i % 6 === 3 ? DEF_SLOTS : ORN_SLOTS).push(slot); }
+}
+const baubleMs = ['#d62f2f','#e3b53b','#c8d0d8','#2f6fd6'].map(c => new THREE.MeshStandardMaterial({color:c, metalness:.65, roughness:.22, emissive:c, emissiveIntensity:.3}));
+const goldM = new THREE.MeshStandardMaterial({color:0xe3b53b, metalness:.7, roughness:.3});
+const caneTex = (() => { const c = document.createElement('canvas'); c.width = 64; c.height = 16; const g = c.getContext('2d'); g.fillStyle = '#ffffff'; g.fillRect(0,0,64,16);
+  g.fillStyle = '#d62f2f'; for(let x=-16;x<64;x+=16){ g.beginPath(); g.moveTo(x,16); g.lineTo(x+8,16); g.lineTo(x+16,0); g.lineTo(x+8,0); g.fill(); }
+  const t = new THREE.CanvasTexture(c); t.wrapS = THREE.RepeatWrapping; t.repeat.set(5,1); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+const caneM = new THREE.MeshStandardMaterial({map:caneTex, roughness:.4});
+const caneCurve = new THREE.CatmullRomCurve3([[0,-.24,0],[0,0,0],[0,.08,0],[.03,.13,0],[.08,.14,0],[.12,.11,0],[.13,.07,0]].map(v => new THREE.Vector3(...v)));
+const bowM = M(0xc4202a, {roughness:.5});
+DEF_SLOTS.forEach((sl,i) => {
+  const g = new THREE.Group(); g.position.set(sl.x, sl.y, sl.z); g.rotation.y = Math.PI/2 - sl.a; treeG.add(g);
+  const kind = i % 6;
+  if(kind < 4){ const m = new THREE.Mesh(new THREE.SphereGeometry(.13, 18, 14), baubleMs[(i*3) % 4]); m.position.y = -.12; g.add(m);    // 반짝이는 볼
+    const c = new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,.05,10), goldM); c.position.y = .02; g.add(c); g.userData.glow = m.material; }
+  else if(kind === 4){ const m = new THREE.Mesh(new THREE.TubeGeometry(caneCurve, 24, .025, 8), caneM); m.position.y = -.05; g.add(m); }   // 지팡이 사탕
+  else { for(const sx of [-1,1]){ const l = new THREE.Mesh(new THREE.SphereGeometry(.07, 12, 8), bowM); l.scale.set(1.3,.75,.5); l.position.set(sx*.08,-.04,0); l.rotation.z = sx*.4; g.add(l);   // 리본
+      const tl = new THREE.Mesh(new THREE.BoxGeometry(.04,.16,.02), bowM); tl.position.set(sx*.04,-.15,0); tl.rotation.z = sx*.3; g.add(tl); }
+    const k = new THREE.Mesh(new THREE.SphereGeometry(.04, 10, 8), bowM); k.position.y = -.04; g.add(k); }
+});
+// 선물 상자
+const GIFTS = [[70,2.05,.7,.55,.6,'#d62f2f','#ffd24a',1],[95,2.3,.5,.42,.5,'#2f8a4f','#f4f1ea',0],[118,2.0,.62,.5,.55,'#2f6fd6','#ffd24a',1],[45,2.2,.45,.38,.45,'#e3b53b','#d62f2f',0],
+  [18,2.15,.6,.45,.6,'#f4f1ea','#d62f2f',1],[140,2.3,.42,.62,.42,'#8a4fd6','#f4f1ea',0],[-12,2.05,.5,.36,.5,'#d62f2f','#2f8a4f',1],[165,2.05,.55,.42,.55,'#e26fa3','#f4f1ea',0],
+  [192,2.2,.48,.5,.48,'#2f8a4f','#d62f2f',1],[82,2.6,.36,.3,.36,'#ffd24a','#d62f2f',0],[106,2.62,.4,.32,.32,'#d62f2f','#f4f1ea',1],[30,2.55,.34,.28,.34,'#2f6fd6','#f4f1ea',0]];
+GIFTS.forEach(([deg,d,w,h,dp,col,rib,snow],i) => {
+  const a = deg*Math.PI/180, g = new THREE.Group(); g.position.set(Math.cos(a)*d, .1, Math.sin(a)*d); g.rotation.y = rnd(i+40)*1.2 - .6; treeG.add(g);
+  const add = (y0, W, H, D) => {
+    box(W, H, D, M(col,{roughness:.6}), 0, y0 + H/2, 0, g);
+    box(W + .01, H + .01, .07, M(rib,{roughness:.4}), 0, y0 + H/2, 0, g); box(.07, H + .01, D + .01, M(rib,{roughness:.4}), 0, y0 + H/2, 0, g);
+    for(const sx of [-1,1]){ const b = new THREE.Mesh(new THREE.TorusGeometry(.075, .022, 8, 16), M(rib,{roughness:.4})); b.position.set(sx*.06, y0 + H + .05, 0); b.rotation.set(0, 0, sx*.7); g.add(b); }
+    if(snow){ const sn = new THREE.Mesh(new THREE.BoxGeometry(W*.85, .03, D*.85), snowM); sn.position.y = y0 + H + .015; sn.position.x = .04; g.add(sn); }
+  };
+  add(0, w, h, dp); if(i === 0) add(h, w*.55, h*.55, dp*.55);                                           // 큰 선물 위에 작은 선물 하나 더
+});
+// 트리 주변에 살살 내리는 눈
+const snowPts = new THREE.BufferGeometry(), SNOW_N = 140, snowArr = new Float32Array(SNOW_N*3);
+for(let i=0;i<SNOW_N;i++){ const a = rnd(i+600)*6.28, r = rnd(i+601)*3; snowArr[i*3] = Math.cos(a)*r; snowArr[i*3+1] = rnd(i+602)*5; snowArr[i*3+2] = Math.sin(a)*r; }
+snowPts.setAttribute('position', new THREE.BufferAttribute(snowArr, 3));
+const flakeTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d'); const gr = g.createRadialGradient(16,16,0,16,16,16);
+  gr.addColorStop(0,'rgba(255,255,255,1)'); gr.addColorStop(.5,'rgba(255,255,255,.7)'); gr.addColorStop(1,'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0,0,32,32); return new THREE.CanvasTexture(c); })();
+treeG.add(new THREE.Points(snowPts, new THREE.PointsMaterial({size:.09, map:flakeTex, transparent:true, depthWrite:false})));
+// 뒤쪽 벽 위에 길게 늘어진 전구 장식
+const WALL_BULBS = 64, wallBulbs = new THREE.InstancedMesh(new THREE.SphereGeometry(.06, 8, 6), new THREE.MeshBasicMaterial(), WALL_BULBS);
+for(let i=0;i<WALL_BULBS;i++){ const f = (i+.5)/WALL_BULBS, x = -14.6 + f*29.2, sag = Math.sin(((x + 14.6) % 3.65)/3.65*Math.PI)*.35;
+  dummy.position.set(x, 4.72 - sag, -7.7); dummy.updateMatrix(); wallBulbs.setMatrixAt(i, dummy.matrix); wallBulbs.setColorAt(i, BULB_COLS[(i*2) % BULB_COLS.length]); }
+scene.add(wallBulbs); wallsBack.push(wallBulbs);
+const treeTag = document.createElement('div'); treeTag.className = 'tag'; treeTag.innerHTML = '<div class="nm">🎄 크리스마스 트리</div>'; labelsEl.appendChild(treeTag);
+const tmpC = new THREE.Color();
+function updateTree(dt, t){
+  starM.emissiveIntensity = .85 + Math.sin(t*2.4)*.3; treeStar.rotation.y = t*.6;
+  starGlow.material.opacity = .75 + Math.sin(t*2.4)*.2; starGlow.scale.setScalar(2.3 + Math.sin(t*2.4)*.15);
+  for(let i=0;i<BULBS;i++){ const k = .35 + .65*Math.max(0, Math.sin(t*2.2 + bulbPh[i])); bulbs.setColorAt(i, tmpC.copy(BULB_COLS[i % BULB_COLS.length]).multiplyScalar(k)); }
+  bulbs.instanceColor.needsUpdate = true;
+  for(let i=0;i<WALL_BULBS;i++){ const on = (Math.floor(t*1.5) + i) % 3 !== 0; wallBulbs.setColorAt(i, tmpC.copy(BULB_COLS[(i*2) % BULB_COLS.length]).multiplyScalar(on ? 1 : .3)); }
+  wallBulbs.instanceColor.needsUpdate = true;
+  baubleMs.forEach((m,i) => { m.emissiveIntensity = .2 + .35*Math.max(0, Math.sin(t*1.8 + i*1.6)); });   // 기본 장식이 반짝반짝
+  treeLights.forEach((l,i) => { l.intensity = 3.2 + Math.sin(t*3.1 + i*2)*.9; });
+  const arr = snowPts.attributes.position.array;
+  for(let i=0;i<SNOW_N;i++){ arr[i*3+1] -= dt*(.22 + rnd(i)*.2); arr[i*3] += Math.sin(t + i)*dt*.05; if(arr[i*3+1] < .1) arr[i*3+1] = 5; }
+  snowPts.attributes.position.needsUpdate = true;
+  placeAt(treeTag, TREE.x, 5.45, TREE.z);
+}
+
 let dinoW = 0;
 function placeAt(el,x,y,z){ tmp.set(x,y,z).project(camera); el.style.display = tmp.z > 1 ? 'none' : ''; el.style.left = ((tmp.x*.5+.5)*innerWidth)+'px'; el.style.top = ((-tmp.y*.5+.5)*innerHeight)+'px'; }
 /* 글러브로 샌드백 치는 소리 (파일 없이 브라우저에서 합성) */
@@ -603,6 +784,146 @@ function dinoHit(vol=1){
   d.addEventListener('animationend', () => d.remove());
 }
 
+/* ---------- 창밖 풍경: 시간(낮·노을·밤)과 계절(봄·여름·가을·겨울)에 따라 바뀌고 구름이 흘러감 ---------- */
+const SKY = {h:12, day:1, dusk:0, season:'winter'};
+function seasonNow(){                                                   // 미리보기: 주소 끝에 #winter, #spring, #t1900-autumn 처럼 붙이면 바로 확인
+  const m = /(spring|summer|autumn|winter)/.exec(location.hash); if(m) return m[1];
+  const mo = new Date().getMonth() + 1;
+  return mo >= 3 && mo <= 5 ? 'spring' : mo >= 6 && mo <= 8 ? 'summer' : mo >= 9 && mo <= 10 ? 'autumn' : 'winter';
+}
+function mixHex(a, b, k){
+  k = Math.min(1, Math.max(0, k)); const A = parseInt(a.slice(1),16), B = parseInt(b.slice(1),16);
+  const c = sh => Math.round(((A>>sh)&255) + (((B>>sh)&255) - ((A>>sh)&255))*k);
+  return '#' + ((1<<24) | (c(16)<<16) | (c(8)<<8) | c(0)).toString(16).slice(1);
+}
+const VW = 512, VH = 256, PXU = 128;                                    // 창문 한 칸(4m) = 512px, 두 창문이 이어진 풍경을 보여 줌
+const SEASON_PAL = {
+  spring:{hill:'#a9cf93', hill2:'#8fbf86', ground:'#a8d48a', leaf:['#f7c6d9','#f3a7c3','#fde3ec'], trunk:'#6b4a35', bld:'#9aa7b8'},
+  summer:{hill:'#78b06c', hill2:'#5c9e62', ground:'#7cba60', leaf:['#3f8f45','#4fa352','#2f7a3c'], trunk:'#5a3d2b', bld:'#93a1b3'},
+  autumn:{hill:'#c9a063', hill2:'#b5814c', ground:'#c99a5a', leaf:['#e07a2f','#d1452f','#e8b23a'], trunk:'#5a3d2b', bld:'#a39a92'},
+  winter:{hill:'#eef3f8', hill2:'#dbe5ef', ground:'#f4f7fb', leaf:['#2f5d43','#3a6b4d'], trunk:'#4a3a30', bld:'#9aa6b6', snow:true}
+};
+const nightOf = () => (1 - SKY.day);
+const shade = hex => mixHex(hex, '#0d1530', nightOf()*.74*(1 - SKY.dusk*.35));   // 밤에는 어둡게
+function skyCols(){
+  const w = SKY.season === 'winter';
+  let top = mixHex('#070d22', w ? '#7fb1d9' : '#4b9be0', SKY.day), bot = mixHex('#1c2a52', w ? '#e3eef7' : '#bfe2fb', SKY.day);
+  return [mixHex(top, '#3d3f7a', SKY.dusk*.8), mixHex(bot, '#f7a86a', SKY.dusk*.9)];
+}
+function glowDisc(g, x, y, r, core, glow){
+  const gr = g.createRadialGradient(x, y, r*.3, x, y, r*3.2); gr.addColorStop(0, glow); gr.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = gr; g.fillRect(x - r*3.2, y - r*3.2, r*6.4, r*6.4);
+  g.fillStyle = core; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill();
+}
+function paintBack(w){                                                  // 하늘 · 별 · 해 · 달 (5분마다 다시 그림)
+  const g = w.bk.getContext('2d'), [top, bot] = skyCols(), night = nightOf();
+  const gr = g.createLinearGradient(0, 0, 0, VH); gr.addColorStop(0, top); gr.addColorStop(1, bot); g.fillStyle = gr; g.fillRect(0, 0, VW, VH);
+  if(night > .05) for(let i=0;i<80;i++){ const px = -1300 + rnd(i)*2600 - w.X0; if(px < 0 || px > VW) continue;
+    const sz = 1.2 + rnd(i+3)*1.6; g.fillStyle = `rgba(255,252,235,${((.35 + rnd(i+7)*.65)*night).toFixed(2)})`; g.fillRect(px, rnd(i+99)*VH*.62, sz, sz); }
+  const h = SKY.h;
+  if(h > 5.5 && h < 19.5){ const p = (h-5.5)/14, px = -1150 + p*2300 - w.X0, y = VH*.78 - Math.sin(p*Math.PI)*VH*1.05;
+    if(px > -80 && px < VW+80 && y < VH) glowDisc(g, px, y, 22, SKY.dusk > .2 ? '#ffb45e' : '#fff7cf', SKY.dusk > .2 ? 'rgba(255,140,60,.55)' : 'rgba(255,245,200,.5)'); }
+  if(night > .3){ const px = 830 - w.X0, y = 56;
+    if(px > -60 && px < VW+60){ glowDisc(g, px, y, 18, '#f6f1d6', `rgba(220,225,255,${(.35*night).toFixed(2)})`);
+      g.fillStyle = 'rgba(180,175,150,.35)'; [[-6,-4,4],[5,3,3],[-2,7,2.5]].forEach(([dx,dy,r]) => { g.beginPath(); g.arc(px+dx, y+dy, r, 0, 7); g.fill(); }); } }
+}
+function paintFront(w){                                                 // 산 · 건물 · 땅 · 나무 (계절별, 5분마다 다시 그림)
+  const g = w.fr.getContext('2d'), P = SEASON_PAL[SKY.season], night = nightOf(), HZ = 200;
+  g.clearRect(0, 0, VW, VH);
+  const ridge = (par, base, a1, f1, a2, f2, col) => { g.fillStyle = col; g.beginPath(); g.moveTo(0, VH);
+    for(let px=0; px<=VW; px+=8){ const X = (w.X0 + px)*par; g.lineTo(px, base - a1*Math.sin(X*f1 + 1) - a2*Math.sin(X*f2 + 2)); } g.lineTo(VW, VH); g.fill(); };
+  ridge(.35, HZ-46, 30, .006, 14, .019, shade(P.hill2));
+  if(P.snow){ g.save(); g.globalAlpha = .55; ridge(.35, HZ-50, 30, .006, 14, .019, shade('#ffffff')); g.restore(); }
+  for(let b=-34;b<34;b++){                                              // 도시 건물 (밤에는 창문에 불이 켜짐)
+    const bw = 30 + rnd(b+5)*34, px = b*58 + rnd(b)*18 - w.X0; if(px + bw < 0 || px > VW) continue;
+    const bh = 36 + rnd(b+9)*96, top = HZ + 8 - bh;
+    g.fillStyle = shade(mixHex(P.bld, '#6f7d92', rnd(b+2)*.6)); g.fillRect(px, top, bw, bh);
+    if(P.snow){ g.fillStyle = shade('#f7fafd'); g.fillRect(px-1, top-3, bw+2, 4); }
+    for(let r=0; r<Math.floor((bh-10)/12); r++) for(let c=0; c<Math.floor((bw-6)/9); c++){
+      const lit = night > .35 && rnd(b*131 + r*17 + c*7) > .42;
+      g.fillStyle = lit ? `rgba(255,214,120,${(.55 + night*.45).toFixed(2)})` : shade(mixHex('#c6d8ea', '#8fa6bf', rnd(b+r+c)));
+      g.fillRect(px + 4 + c*9, top + 6 + r*12, 5, 7);
+    }
+  }
+  ridge(.8, HZ+18, 7, .012, 4, .03, shade(P.ground));
+  for(let i=-44;i<44;i++){                                              // 앞쪽 나무
+    const px = i*46 + rnd(i+50)*22 - w.X0; if(px < -40 || px > VW+40) continue;
+    const sc = .75 + rnd(i+70)*.5, by = VH - 8 - rnd(i+3)*14;
+    if(SKY.season === 'winter'){
+      if(rnd(i+11) > .3){                                               // 눈 쌓인 소나무
+        for(let k=0;k<3;k++){ const y = by - 14*sc - k*16*sc, hw = (24 - k*6)*sc;
+          g.fillStyle = shade(P.leaf[k%2]); g.beginPath(); g.moveTo(px - hw, y); g.lineTo(px + hw, y); g.lineTo(px, y - 26*sc); g.fill();
+          g.fillStyle = shade('#ffffff'); g.beginPath(); g.moveTo(px - hw*.55, y - 12*sc); g.lineTo(px + hw*.55, y - 12*sc); g.lineTo(px, y - 26*sc); g.fill(); }
+        g.fillStyle = shade(P.trunk); g.fillRect(px - 3*sc, by - 14*sc, 6*sc, 14*sc);
+      } else {                                                          // 잎 떨어진 나무
+        g.strokeStyle = shade(P.trunk); g.lineWidth = 3*sc; g.beginPath(); g.moveTo(px, by); g.lineTo(px, by - 44*sc);
+        for(let k=0;k<4;k++){ const y = by - (18 + k*8)*sc, d = (k%2 ? 1 : -1); g.moveTo(px, y); g.lineTo(px + d*(16 - k*2)*sc, y - 12*sc); } g.stroke();
+        g.strokeStyle = shade('#ffffff'); g.lineWidth = 1.5*sc; g.beginPath(); g.moveTo(px - 10*sc, by - 34*sc); g.lineTo(px + 10*sc, by - 40*sc); g.stroke();
+      }
+    } else {                                                            // 둥근 나무 (봄 벚꽃 · 여름 초록 · 가을 단풍)
+      g.fillStyle = shade(P.trunk); g.fillRect(px - 3*sc, by - 22*sc, 6*sc, 22*sc);
+      [[0,-34,17],[-12,-28,13],[12,-27,13],[-5,-44,12],[7,-42,12]].forEach(([dx,dy,r],k) => {
+        g.fillStyle = shade(P.leaf[(k + i + 99) % P.leaf.length]); g.beginPath(); g.arc(px + dx*sc, by + dy*sc, r*sc, 0, 7); g.fill(); });
+    }
+  }
+  if(P.snow){ g.fillStyle = shade('#ffffff'); g.fillRect(0, VH-8, VW, 8); }
+}
+const CLOUD_PUFF = [[0,0,28],[26,6,22],[-26,8,20],[12,-12,22],[-11,-8,18],[38,12,15],[-38,13,14]];
+function paintWin(w, t){                                                // 매 순간: 하늘 → 구름 → 풍경 → 눈·낙엽 → 유리 → 창틀
+  const g = w.cv.getContext('2d'), P = SEASON_PAL[SKY.season], night = nightOf();
+  g.drawImage(w.bk, 0, 0);
+  const cloudCol = mixHex(mixHex('#2c3862', SKY.season === 'winter' ? '#eef2f6' : '#ffffff', SKY.day), '#f2b7a2', SKY.dusk*.7);
+  const cloudSh = mixHex(cloudCol, '#7f8aa6', .35);
+  for(let i=0;i<10;i++){                                                // 구름이 천천히 흘러감
+    const sp = 6 + rnd(i+210)*10, X = ((-1300 + rnd(i+200)*2600 + t*sp + 1300) % 2600 + 2600) % 2600 - 1300, px = X - w.X0;
+    if(px < -90 || px > VW+90) continue;
+    const y = 26 + rnd(i+220)*92, sc = .65 + rnd(i+230)*.75;
+    g.globalAlpha = .75 + SKY.day*.2;
+    g.fillStyle = cloudSh; CLOUD_PUFF.forEach(([dx,dy,r]) => { g.beginPath(); g.arc(px + dx*sc, y + dy*sc + 5*sc, r*sc, 0, 7); g.fill(); });
+    g.fillStyle = cloudCol; CLOUD_PUFF.forEach(([dx,dy,r]) => { g.beginPath(); g.arc(px + dx*sc, y + dy*sc, r*sc, 0, 7); g.fill(); });
+    g.globalAlpha = 1;
+  }
+  g.drawImage(w.fr, 0, 0);
+  const se = SKY.season;
+  if(se === 'winter'){ g.fillStyle = `rgba(255,255,255,${(.9 - night*.25).toFixed(2)})`;          // 함박눈
+    for(let i=0;i<90;i++){ const x = ((rnd(i)*VW + Math.sin(t*.9 + i)*10 + t*6) % VW + VW) % VW, y = (rnd(i+400)*VH + t*(16 + rnd(i+300)*24)) % VH, r = 1 + rnd(i+500)*1.9;
+      g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); } }
+  else if(se === 'autumn' || se === 'spring'){                           // 낙엽 · 꽃잎
+    const n = se === 'autumn' ? 16 : 24;
+    for(let i=0;i<n;i++){ const x = ((rnd(i+40)*VW + Math.sin(t*1.3 + i)*18 + t*10) % VW + VW) % VW, y = (rnd(i+440)*VH + t*(12 + rnd(i+340)*14)) % VH;
+      g.save(); g.translate(x, y); g.rotate(t*2 + i); g.fillStyle = shade(se === 'autumn' ? P.leaf[i % 3] : (i % 3 ? '#f8c9da' : '#ffffff'));
+      g.beginPath(); g.ellipse(0, 0, se === 'autumn' ? 4 : 3, se === 'autumn' ? 2.2 : 1.8, 0, 0, 7); g.fill(); g.restore(); } }
+  const c = w.broken && w.crk;
+  g.save();
+  if(c){ g.beginPath(); g.rect(0, 0, VW, VH); c.hole.forEach(([x,y],k) => k ? g.lineTo(x,y) : g.moveTo(x,y)); g.closePath(); g.clip('evenodd'); }   // 구멍 난 곳은 유리 없이 바깥이 그대로 보임
+  g.fillStyle = c ? 'rgba(215,235,250,.2)' : 'rgba(190,225,255,.07)'; g.fillRect(0, 0, VW, VH);
+  g.fillStyle = `rgba(255,255,255,${(.05 + SKY.day*.07).toFixed(3)})`;
+  [[70,60],[150,22]].forEach(([x,wd]) => { g.beginPath(); g.moveTo(x, 0); g.lineTo(x + wd, 0); g.lineTo(x + wd - 90, VH); g.lineTo(x - 90, VH); g.fill(); });
+  if(c){ g.strokeStyle = 'rgba(255,255,255,.85)'; g.lineWidth = 1.6;
+    c.lines.forEach(l => { g.beginPath(); l.forEach(([x,y],k) => k ? g.lineTo(x,y) : g.moveTo(x,y)); g.stroke(); });
+    g.lineWidth = 1; [1.35, 1.75].forEach(f => { g.beginPath(); c.hole.forEach(([x,y],k) => { const X = c.cx + (x-c.cx)*f, Y = c.cy + (y-c.cy)*f; k ? g.lineTo(X,Y) : g.moveTo(X,Y); }); g.closePath(); g.stroke(); }); }
+  g.restore();
+  if(c){ g.strokeStyle = 'rgba(255,255,255,.95)'; g.lineWidth = 2.4; g.beginPath(); c.hole.forEach(([x,y],k) => k ? g.lineTo(x,y) : g.moveTo(x,y)); g.closePath(); g.stroke(); }
+  g.fillStyle = '#e8e4d6'; g.fillRect(0, 0, VW, 8); g.fillRect(0, VH-10, VW, 10); g.fillRect(0, 0, 8, VH); g.fillRect(VW-8, 0, 8, VH); g.fillRect(VW/2-3, 0, 6, VH);   // 창틀
+  g.fillStyle = 'rgba(0,0,0,.12)'; g.fillRect(8, 8, VW-16, 3);
+  w.tex.needsUpdate = true;
+}
+WINS.forEach(w => {
+  w.X0 = w.x*PXU - VW/2;
+  w.cv = document.createElement('canvas'); w.cv.width = VW; w.cv.height = VH;
+  w.bk = document.createElement('canvas'); w.bk.width = VW; w.bk.height = VH;
+  w.fr = document.createElement('canvas'); w.fr.width = VW; w.fr.height = VH;
+  w.tex = new THREE.CanvasTexture(w.cv); w.tex.colorSpace = THREE.SRGBColorSpace;
+  w.pane.material = new THREE.MeshBasicMaterial({map:w.tex});
+});
+let viewKey = '', lastView = -1;
+function updateView(t, wallOn){
+  if(!wallOn || t - lastView < 1/15) return; lastView = t;
+  const key = SKY.season + Math.round(SKY.h*12) + '|' + Math.round(SKY.day*20) + Math.round(SKY.dusk*20);
+  if(key !== viewKey){ viewKey = key; WINS.forEach(w => { paintBack(w); paintFront(w); }); }
+  WINS.forEach(w => paintWin(w, t));
+}
+
 /* ---------- 창문 탈출: 창문 앞에서 Space → 유리 깨지며 밖으로 → 잠시 후 입구에서 다시 등장 ---------- */
 const JUMP_DUR = 2.6, SPAWN = {x:0, z:10.5};
 function jumpPose(e, t){
@@ -615,22 +936,16 @@ function jumpPose(e, t){
     return {x:w.x, z:-7.7-p*1.2, y:2.1-p*p*.9, tilt:1.25+p*.5, vis:true}; }
   return {x:w.x, z:-9, y:0, tilt:0, vis:false};                         // 밖으로 사라짐 (리스폰 대기)
 }
-// 깨진 창문 그림 (가운데 구멍 + 금)
-const holeTex = (() => {
-  const c = document.createElement('canvas'); c.width = 256; c.height = 128; const g = c.getContext('2d');
-  g.fillStyle = '#a8d0e4'; g.fillRect(0,0,256,128);
-  const pts = []; for(let i=0;i<14;i++){ const a = i/14*Math.PI*2, r = 34 + Math.random()*26; pts.push([128+Math.cos(a)*r*1.7, 64+Math.sin(a)*r]); }
-  g.fillStyle = '#1f3446'; g.beginPath(); pts.forEach(([x,y],i) => i ? g.lineTo(x,y) : g.moveTo(x,y)); g.closePath(); g.fill();
-  g.strokeStyle = 'rgba(255,255,255,.85)'; g.lineWidth = 2;
-  pts.forEach(([x,y]) => { const a = Math.atan2(y-64,(x-128)/1.7); g.beginPath(); g.moveTo(x,y); g.lineTo(x+Math.cos(a)*(30+Math.random()*50), y+Math.sin(a)*(20+Math.random()*30)); g.stroke(); });
-  return new THREE.CanvasTexture(c);
-})();
-WINS.forEach(w => { w.hole = new THREE.Mesh(new THREE.PlaneGeometry(4,2), new THREE.MeshBasicMaterial({map:holeTex})); w.hole.position.set(w.x,3,-7.72); w.hole.visible = false; scene.add(w.hole); });
 const shards = [], shardM = new THREE.MeshStandardMaterial({color:0xd6eef8, roughness:.15, metalness:.1, transparent:true, opacity:.85, side:THREE.DoubleSide});
 const shardG = new THREE.BufferGeometry(); shardG.setAttribute('position', new THREE.Float32BufferAttribute([0,.5,0, -.4,-.4,0, .45,-.3,0],3)); shardG.computeVertexNormals();
 function breakWindow(i, vol=1){
   const w = WINS[i]; if(!w) return;
   w.broken = true; w.t0 = performance.now()/1000; glassSound(vol);
+  const cx = VW/2 + (Math.random()-.5)*90, cy = VH*.52 + (Math.random()-.5)*40, hole = [], lines = [];   // 깨진 모양은 매번 다르게
+  for(let k=0;k<15;k++){ const a = k/15*Math.PI*2, r = 52 + Math.random()*40; hole.push([cx + Math.cos(a)*r*1.55, cy + Math.sin(a)*r]); }
+  hole.forEach(([x,y]) => { const a = Math.atan2(y-cy, (x-cx)/1.55), L = 70 + Math.random()*170, j = (Math.random()-.5)*.5;
+    lines.push([[x,y],[x + Math.cos(a+j)*L*.5, y + Math.sin(a+j)*L*.3],[x + Math.cos(a)*L, y + Math.sin(a)*L*.6]]); });
+  w.crk = {cx, cy, hole, lines};
   popAt('쨍그랑!', w.x + (Math.random()-.5), 4.3, -7.2);
   for(let k=0;k<26;k++){
     const m = new THREE.Mesh(shardG, shardM); m.scale.setScalar(.12+Math.random()*.2);
@@ -650,7 +965,7 @@ function updateGlass(dt, t, wallOn){
   }
   WINS.forEach(w => {
     if(w.broken && t - w.t0 > 5) w.broken = false;                     // 5초 뒤 새 유리로 복구
-    w.pane.visible = wallOn && !w.broken; w.hole.visible = wallOn && w.broken;
+    w.pane.visible = wallOn;
   });
 }
 const nearWin = () => WINS.findIndex(w => me.z < -5.6 && Math.abs(me.x - w.x) < 2.2);
@@ -716,7 +1031,7 @@ function kickSound(vol=1){
 const papers = [], paperM = new THREE.MeshStandardMaterial({color:0xf3f1ea, roughness:.95, flatShading:true});
 const paperG = new THREE.IcosahedronGeometry(.14, 0);
 const PHIT = ['퍽!','팍!','명중!','휙~ 퍽!'];
-const paperZone = () => joined && me.seat < 0 && !busy() && me.x < -7 && me.z > -4.5 && me.z < 12;
+const paperZone = () => joined && me.seat < 0 && !busy() && me.x < -7 && me.z > -2.8 && me.z < 16.8;
 const nearFrame = () => { let b = 0; PHOTO_Z.forEach((z,i) => { if(Math.abs(me.z-z) < Math.abs(me.z-PHOTO_Z[b])) b = i; }); return b; };
 let lastPaperAt = 0;
 function throwPaper(fx, fz, fi, u, v, vol, mine){
@@ -895,7 +1210,7 @@ function dozeFx(e, t, sitting){
 const DAY_GLASS = new THREE.Color(0xa8d0e4), DAY_EM = new THREE.Color(0x5a8aa0), SUNSET_GLASS = new THREE.Color(0xf2a65a), SUNSET_EM = new THREE.Color(0xc0642a);
 const NIGHT_GLASS = new THREE.Color(0x1b2640), NIGHT_EM = new THREE.Color(0x0c1428), BG_DAY = new THREE.Color(0x2b2d2a), BG_NIGHT = new THREE.Color(0x15171c);
 function clockH(){                                                      // 미리보기용: 주소 끝에 #t1845 처럼 시간을 넣으면 그 시각으로 보임
-  const m = /^#t(\d{2})(\d{2})$/.exec(location.hash); if(m) return +m[1] + +m[2]/60;
+  const m = /t(\d{2})(\d{2})/.exec(location.hash); if(m) return +m[1] + +m[2]/60;
   const d = new Date(); return d.getHours() + d.getMinutes()/60;
 }
 let lastSky = 0;
@@ -907,8 +1222,7 @@ function updateSky(){
   else if(h >= 5 && h < 7){ day = (h-5)/2; dusk = 1 - Math.abs(h-6)/1; }
   else day = 0;
   dusk = Math.max(0, Math.min(1, dusk));
-  glassM.color.copy(NIGHT_GLASS).lerp(DAY_GLASS, day).lerp(SUNSET_GLASS, dusk*.85);
-  glassM.emissive.copy(NIGHT_EM).lerp(DAY_EM, day).lerp(SUNSET_EM, dusk*.85);
+  SKY.h = h; SKY.day = day; SKY.dusk = dusk; SKY.season = seasonNow();
   hemi.intensity = (.72 + .38*day)*(1 - .4*clubK); sun.intensity = (.5 + .9*day)*(1 - .5*clubK);
   sun.color.setRGB(1, 1 - dusk*.18, 1 - dusk*.35);
   scene.background.copy(BG_NIGHT).lerp(BG_DAY, day);
@@ -1055,6 +1369,219 @@ function cupFx(e, t, flat){
   if(on) e.cfBar.style.width = Math.max(0, 100*(1 - (ph - BREW - DRINK)/BOOST)).toFixed(0) + '%';
 }
 
+/* ---------- 🎄 오너먼트: 트리 앞에서 O → 5가지 모양 중 골라 기본 디자인 그대로 또는 직접 그리기·글씨로 꾸며서 달기 ---------- */
+const ORN_TYPES = [['볼','🔴'],['별','⭐'],['종','🔔'],['양말','🧦'],['진저쿠키','🍪']];
+const ORN_COLS = ['#d62f2f','#2f8a4f','#e3b53b','#c8d0d8','#2f6fd6','#e26fa3','#8a4fd6','#f4f1ea'];
+const ORN_MAX_MINE = 3, ORN_SIZE = .42;
+function closedSpline(P, n=8){                                          // 점들을 부드러운 곡선 테두리로
+  const out = [], L = P.length;
+  for(let i=0;i<L;i++){ const p0 = P[(i-1+L)%L], p1 = P[i], p2 = P[(i+1)%L], p3 = P[(i+2)%L];
+    for(let k=0;k<n;k++){ const t = k/n, t2 = t*t, t3 = t2*t;
+      out.push([0,1].map(j => .5*(2*p1[j] + (-p0[j]+p2[j])*t + (2*p0[j]-5*p1[j]+4*p2[j]-p3[j])*t2 + (-p0[j]+3*p1[j]-3*p2[j]+p3[j])*t3))); } }
+  return out;
+}
+const ORN_SIL = [                                                       // 모양별 테두리 (0~1, 아래로 갈수록 y 증가)
+  Array.from({length:64}, (_,k) => [.5 + Math.cos(k/64*6.2832)*.42, .54 + Math.sin(k/64*6.2832)*.42]),
+  Array.from({length:10}, (_,k) => { const a = -Math.PI/2 + k*Math.PI/5, r = k % 2 ? .2 : .45; return [.5 + Math.cos(a)*r, .53 + Math.sin(a)*r]; }),
+  closedSpline([[.5,.1],[.6,.13],[.665,.22],[.685,.36],[.715,.52],[.78,.66],[.89,.78],[.9,.85],[.5,.88],[.1,.85],[.11,.78],[.22,.66],[.285,.52],[.315,.36],[.335,.22],[.4,.13]]),
+  closedSpline([[.3,.08],[.66,.08],[.66,.3],[.64,.55],[.74,.62],[.86,.7],[.9,.8],[.84,.9],[.7,.93],[.5,.9],[.36,.84],[.28,.72],[.27,.55],[.29,.3]]),
+  closedSpline([[.5,.05],[.6,.08],[.65,.17],[.62,.27],[.58,.31],[.78,.33],[.88,.38],[.88,.46],[.78,.5],[.64,.5],[.66,.62],[.76,.82],[.74,.9],[.64,.92],[.56,.82],[.5,.74],
+    [.44,.82],[.36,.92],[.26,.9],[.24,.82],[.34,.62],[.36,.5],[.22,.5],[.12,.46],[.12,.38],[.22,.33],[.42,.31],[.38,.27],[.35,.17],[.4,.08]], 6)
+];
+const ORN_TOP = ORN_SIL.map(P => Math.min(...P.map(q => q[1])));
+function silPath(g, ty, S){ g.beginPath(); ORN_SIL[ty].forEach(([x,y],k) => k ? g.lineTo(x*S, y*S) : g.moveTo(x*S, y*S)); g.closePath(); }
+const okHex = c => /^#[0-9a-f]{6}$/i.test(c || '');
+function drawOrnBase(g, ty, col, S, plain){                              // 기본 디자인 (256 기준으로 그린 뒤 크기에 맞춤)
+  g.save(); g.scale(S/256, S/256); silPath(g, ty, 256); g.clip();
+  const base = ty === 4 ? '#b5733c' : col, gold = col === '#e3b53b' ? '#fff3c4' : '#f0c75a';
+  const gr = g.createRadialGradient(92, 84, 8, 128, 140, 190); gr.addColorStop(0, mixHex(base,'#ffffff',.38)); gr.addColorStop(.55, base); gr.addColorStop(1, mixHex(base,'#000000',.35));
+  g.fillStyle = gr; g.fillRect(0, 0, 256, 256);
+  const dot = (x, y, r, c) => { g.fillStyle = c; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); };
+  if(!plain){
+    if(ty === 0){ g.fillStyle = gold; g.fillRect(0, 124, 256, 24); g.fillRect(0, 94, 256, 6); g.fillRect(0, 172, 256, 6); for(let x=10;x<256;x+=20) dot(x, 136, 3.5, '#ffffff'); }
+    else if(ty === 1){ g.save(); g.translate(128, 135); g.scale(.55, .55); g.translate(-128, -135); silPath(g, 1, 256); g.restore();
+      g.strokeStyle = mixHex(base, '#ffffff', .65); g.lineWidth = 7; g.stroke(); for(let i=0;i<14;i++) dot(70 + rnd(i+30)*116, 70 + rnd(i+31)*130, 2 + rnd(i+32)*2, 'rgba(255,255,255,.85)'); }
+    else if(ty === 2){ g.fillStyle = gold; g.fillRect(0, 190, 256, 14);
+      for(const [x,a] of [[108,-.5],[148,.5]]){ g.save(); g.translate(x, 72); g.rotate(a); g.fillStyle = '#2f8a4f'; g.beginPath(); g.ellipse(0, 0, 24, 10, 0, 0, 7); g.fill(); g.restore(); }
+      [[128,66],[118,58],[138,58]].forEach(([x,y]) => dot(x, y, 7, '#d62f2f')); }
+    else if(ty === 3){ g.fillStyle = '#ffffff'; g.fillRect(60, 10, 130, 62); for(let x=72;x<180;x+=18) dot(x, 72, 10, '#ffffff');
+      dot(214, 210, 30, 'rgba(255,255,255,.9)'); dot(76, 196, 22, 'rgba(255,255,255,.9)');
+      for(let i=0;i<9;i++) dot(84 + rnd(i+60)*80, 92 + rnd(i+61)*80, 3 + rnd(i+62)*2, 'rgba(255,255,255,.75)'); }
+    else { g.strokeStyle = '#ffffff'; g.lineWidth = 4; g.lineJoin = 'round';
+      const zig = (x, y, w) => { g.beginPath(); for(let k=0;k<=6;k++) g.lineTo(x + k*w/6, y + (k % 2 ? 7 : -7)); g.stroke(); };
+      zig(36, 108, 26); zig(194, 108, 26); zig(76, 214, 30); zig(150, 214, 30);
+      dot(116, 40, 5, '#2a1a10'); dot(140, 40, 5, '#2a1a10'); g.strokeStyle = '#2a1a10'; g.lineWidth = 3; g.beginPath(); g.arc(128, 48, 12, .2*Math.PI, .8*Math.PI); g.stroke();
+      const b = col === '#f4f1ea' ? '#d62f2f' : col; [100,128,156].forEach(y => { dot(128, y, 9, '#ffffff'); dot(128, y, 7, b); }); }
+  }
+  g.fillStyle = 'rgba(255,255,255,.35)'; g.beginPath(); g.ellipse(92, 82, 26, 14, -.6, 0, 7); g.fill();   // 반짝임
+  g.restore();
+}
+const ornDesign = (() => { const c = document.createElement('canvas'); c.width = c.height = 256; return c; })();
+const ornInk = (() => { const c = document.createElement('canvas'); c.width = c.height = 256; return c; })();
+const OS = {ty:0, col:ORN_COLS[0], mode:'def', plain:false, pen:'#ffffff', w:6, erase:false, textArm:false};
+let ownTok = null;
+const ownId = () => { if(ownTok) return ownTok; try{ ownTok = localStorage.getItem('oid'); if(!ownTok){ ownTok = Math.random().toString(36).slice(2,12); localStorage.setItem('oid', ownTok); } }catch(e){ ownTok = me.id; } return ownTok; };
+
+// ---- 트리 위의 오너먼트 ----
+const orns = new Map(), ornHit = [];
+function ornTexCanvas(o, done){                                         // 기본 디자인 또는 직접 그린 그림 → 128px
+  const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
+  drawOrnBase(g, o.ty, o.col, 128, false);
+  if(o.img){ const im = new Image(); im.onload = () => { g.clearRect(0,0,128,128); g.drawImage(im, 0, 0, 128, 128); done(c); }; im.src = o.img; }
+  return c;
+}
+function makeOrn(o){
+  const pivot = new THREE.Group(), sw = new THREE.Group(); pivot.add(sw);
+  const parts = [], hit = [];
+  let topY;
+  if(o.ty === 0){                                                       // 볼: 둥근 구에 앞뒤로 디자인
+    const tc = document.createElement('canvas'); tc.width = 256; tc.height = 128;
+    const tex = new THREE.CanvasTexture(tc); tex.colorSpace = THREE.SRGBColorSpace;
+    const paint = d => { const g = tc.getContext('2d'); const gr = g.createLinearGradient(0,0,0,128); gr.addColorStop(0, mixHex(o.col,'#000000',.25)); gr.addColorStop(.5, o.col); gr.addColorStop(1, mixHex(o.col,'#000000',.35));
+      g.fillStyle = gr; g.fillRect(0,0,256,128);
+      const pc = document.createElement('canvas'); pc.width = pc.height = 128; const pg = pc.getContext('2d'); pg.drawImage(d, 0, 0, 128, 128);
+      pg.globalCompositeOperation = 'destination-in'; const m = pg.createRadialGradient(64,68,30,64,68,62); m.addColorStop(0,'#000'); m.addColorStop(1,'rgba(0,0,0,0)'); pg.fillStyle = m; pg.fillRect(0,0,128,128);
+      g.drawImage(pc, 16, 0, 96, 128); g.drawImage(pc, 144, 0, 96, 128); tex.needsUpdate = true; };
+    paint(ornTexCanvas(o, paint));
+    const mat = new THREE.MeshStandardMaterial({map:tex, metalness:.35, roughness:.3});
+    const m = new THREE.Mesh(new THREE.SphereGeometry(.16, 28, 20), mat); sw.add(m); hit.push(m); parts.push(m);
+    const cp = new THREE.Mesh(new THREE.CylinderGeometry(.04,.04,.05,10), goldM); cp.position.y = .17; sw.add(cp); parts.push(cp);
+    topY = .2;
+  } else {                                                              // 납작한 모양: 앞면에 디자인
+    const sh = new THREE.Shape(); ORN_SIL[o.ty].forEach(([x,y],k) => k ? sh.lineTo(x, 1-y) : sh.moveTo(x, 1-y));
+    const geo = new THREE.ExtrudeGeometry(sh, {depth:.06, bevelEnabled:true, bevelThickness:.015, bevelSize:.012, bevelSegments:1, curveSegments:4});
+    geo.translate(-.5, -.5, -.03); geo.scale(ORN_SIZE, ORN_SIZE, 1);
+    const tex = new THREE.CanvasTexture(ornTexCanvas(o, c => { tex.image = c; tex.needsUpdate = true; })); tex.colorSpace = THREE.SRGBColorSpace;
+    const side = o.ty === 1 ? goldM : M(o.ty === 4 ? '#8a5428' : mixHex(o.col,'#000000',.3), {roughness:.5});
+    const m = new THREE.Mesh(geo, [new THREE.MeshStandardMaterial({map:tex, roughness:.55}), side]); sw.add(m); hit.push(m); parts.push(m);
+    topY = (.5 - ORN_TOP[o.ty])*ORN_SIZE;
+    if(o.ty === 2){ const cl = new THREE.Mesh(new THREE.SphereGeometry(.035, 10, 8), goldM); cl.position.y = -(.88-.5)*ORN_SIZE - .02; sw.add(cl); }   // 종의 추
+  }
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(.025, .007, 6, 12), goldM); ring.position.y = topY + .02; sw.add(ring);
+  const drop = .3, inner = sw.children; inner.forEach(c => c.position.y -= drop);   // 고리에 실로 매달기
+  const th = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(0, -drop + topY + .02, 0)]), new THREE.LineBasicMaterial({color:0xf0d27a}));
+  sw.add(th);
+  hit.forEach(h => h.userData.orn = o);
+  return {pivot, sw, hit, ph:rnd(orns.size + 3)*6.28};
+}
+function layoutOrns(){                                                  // 같은 자리를 고른 사람이 있으면 빈 자리로 옮겨 겹치지 않게
+  const used = new Set();
+  [...orns.keys()].sort().forEach(k => { const e = orns.get(k); let s = Number.isInteger(e.o.slot) && e.o.slot >= 0 && e.o.slot < ORN_SLOTS.length ? e.o.slot : 0;
+    for(let i=0;i<ORN_SLOTS.length && used.has(s);i++) s = (s + 1) % ORN_SLOTS.length;
+    used.add(s); e.slot = s; const sl = ORN_SLOTS[s], k2 = (sl.r - .1)/sl.r;
+    e.pivot.position.set(sl.x*k2, sl.y + .3, sl.z*k2); e.pivot.rotation.y = Math.PI/2 - sl.a; });
+}
+function addOrn(k, o){
+  if(!o || orns.has(k)) return;
+  const ty = o.ty|0; if(ty < 0 || ty > 4) return;
+  const clean = {ty, col: okHex(o.col) ? o.col : ORN_COLS[0], by: String(o.by || '').slice(0,8), own: String(o.own || ''), slot: o.slot|0,
+    img: typeof o.img === 'string' && o.img.startsWith('data:image/jpeg;base64,') ? o.img : null};
+  const e = makeOrn(clean); e.o = clean; orns.set(k, e); treeG.add(e.pivot); ornHit.push(...e.hit);
+  layoutOrns(); syncOrnMsg();
+}
+function removeOrn(k){
+  const e = orns.get(k); if(!e) return;
+  treeG.remove(e.pivot); e.hit.forEach(h => { const i = ornHit.indexOf(h); if(i >= 0) ornHit.splice(i,1); });
+  e.pivot.traverse(c => { if(c.geometry) c.geometry.dispose(); });
+  orns.delete(k); layoutOrns(); syncOrnMsg();
+}
+function updateOrns(t){ orns.forEach(e => { e.sw.rotation.z = Math.sin(t*1.4 + e.ph)*.07; e.sw.rotation.x = Math.sin(t*1.1 + e.ph*2)*.04; }); }
+const myOrnKeys = () => [...orns.keys()].filter(k => orns.get(k).o.own === ownId()).sort();
+function pickSlot(){
+  const used = new Set([...orns.values()].map(e => e.slot)); let best = -1, bs = -9;
+  ORN_SLOTS.forEach((sl,i) => { if(used.has(i)) return; const sc = Math.cos(sl.a)*.5 + Math.sin(sl.a) + Math.random()*.7 + (sl.y < 3.6 ? .2 : 0); if(sc > bs){ bs = sc; best = i; } });   // 사람들이 잘 보이는 앞쪽부터
+  return best;
+}
+
+// ---- 오너먼트 만들기 창 ----
+const ornModal = $('ornModal'), ornCv = $('ornCv'), ornBtn = $('ornBtn'), ornTip = $('ornTip');
+const nearTree = () => joined && me.seat < 0 && !busy() && Math.hypot(me.x - TREE.x, me.z - TREE.z) < 4.8;
+function paintOrnDesign(){
+  const g = ornDesign.getContext('2d'); g.clearRect(0,0,256,256);
+  drawOrnBase(g, OS.ty, OS.col, 256, OS.mode === 'draw' && OS.plain);
+  if(OS.mode === 'draw'){ g.save(); silPath(g, OS.ty, 256); g.clip(); g.drawImage(ornInk, 0, 0); g.restore(); }
+}
+function paintOrnPreview(){
+  paintOrnDesign();
+  const g = ornCv.getContext('2d'); g.clearRect(0,0,256,256);
+  g.save(); g.translate(128, 128); g.scale(.86, .86); g.translate(-128, -128);   // 모양 둘레에 여유
+  g.drawImage(ornDesign, 0, 0);
+  silPath(g, OS.ty, 256); g.strokeStyle = '#f0d27a'; g.lineWidth = 3; g.stroke();
+  g.fillStyle = '#f0d27a';
+  if(OS.ty === 0){ g.fillRect(116, 16, 24, 16); } else { g.beginPath(); g.arc(128, ORN_TOP[OS.ty]*256 - 6, 7, 0, 7); g.lineWidth = 3; g.stroke(); }
+  if(OS.ty === 2){ g.beginPath(); g.arc(128, .88*256 + 10, 10, 0, 7); g.fill(); }
+  g.restore();
+}
+function syncOrnUI(){
+  [...$('ornTypes').children].forEach((b,i) => b.classList.toggle('on', i === OS.ty));
+  [...$('ornCols').children].forEach(b => b.classList.toggle('on', b.dataset.c === OS.col));
+  [...$('ornPens').children].forEach(b => b.classList.toggle('on', b.dataset.c === OS.pen && !OS.erase));
+  $('ornDef').classList.toggle('on', OS.mode === 'def'); $('ornDraw').classList.toggle('on', OS.mode === 'draw');
+  $('ornTools').hidden = OS.mode !== 'draw'; ornCv.classList.toggle('draw', OS.mode === 'draw');
+  $('ornThin').classList.toggle('on', OS.w === 6 && !OS.erase); $('ornThick').classList.toggle('on', OS.w === 14 && !OS.erase); $('ornErase').classList.toggle('on', OS.erase);
+  $('ornBase').textContent = OS.plain ? '바탕: 단색' : '바탕: 기본 디자인';
+  $('ornHint').textContent = OS.textArm ? '미리보기에서 글씨를 넣을 곳을 눌러 주세요.' : OS.mode === 'draw' ? '미리보기 위에 직접 그려 보세요. 모양 밖은 잘려서 보여요.' : '기본 디자인이에요. 그대로 달아도 되고, 직접 꾸밀 수도 있어요.';
+  paintOrnPreview(); syncOrnMsg();
+}
+function syncOrnMsg(m){
+  if(!$('ornMsg')) return;
+  if(m){ $('ornMsg').textContent = m; return; }
+  const n = myOrnKeys().length; $('ornMsg').textContent = `내 오너먼트 ${n} / ${ORN_MAX_MINE}개 · 트리 전체 ${orns.size} / ${ORN_SLOTS.length}개`;
+  $('ornRemove').disabled = n === 0;
+}
+ORN_TYPES.forEach(([nm,ic],i) => { const b = document.createElement('button'); b.className = 'chip'; b.textContent = ic+' '+nm; b.onclick = () => { OS.ty = i; syncOrnUI(); }; $('ornTypes').appendChild(b); });
+ORN_COLS.forEach(c => { const b = document.createElement('button'); b.className = 'sw'; b.style.background = c; b.dataset.c = c; b.setAttribute('aria-label','오너먼트 색 '+c);
+  b.onclick = () => { OS.col = c; syncOrnUI(); }; $('ornCols').appendChild(b); });
+['#ffffff','#222222','#d62f2f','#2f8a4f','#e3b53b','#2f6fd6','#e26fa3'].forEach(c => { const b = document.createElement('button'); b.className = 'sw'; b.style.background = c; b.dataset.c = c; b.setAttribute('aria-label','펜 색 '+c);
+  b.onclick = () => { OS.pen = c; OS.erase = false; syncOrnUI(); }; $('ornPens').appendChild(b); });
+$('ornDef').onclick = () => { OS.mode = 'def'; OS.textArm = false; syncOrnUI(); };
+$('ornDraw').onclick = () => { OS.mode = 'draw'; syncOrnUI(); };
+$('ornThin').onclick = () => { OS.w = 6; OS.erase = false; syncOrnUI(); };
+$('ornThick').onclick = () => { OS.w = 14; OS.erase = false; syncOrnUI(); };
+$('ornErase').onclick = () => { OS.erase = true; syncOrnUI(); };
+$('ornBase').onclick = () => { OS.plain = !OS.plain; syncOrnUI(); };
+$('ornInkClear').onclick = () => { ornInk.getContext('2d').clearRect(0,0,256,256); syncOrnUI(); };
+const armText = () => { if(!$('ornText').value.trim()){ $('ornText').focus(); syncOrnMsg('넣을 글씨를 먼저 적어 주세요.'); return; } OS.textArm = true; OS.erase = false; syncOrnUI(); };
+$('ornTextOk').onclick = armText;
+$('ornText').addEventListener('keydown', e => { if(e.isComposing) return; if(e.key === 'Enter'){ e.preventDefault(); armText(); } });
+const ornPt = e => { const r = ornCv.getBoundingClientRect(); const x = (e.clientX - r.left)/r.width*256, y = (e.clientY - r.top)/r.height*256; return [(x - 128)/.86 + 128, (y - 128)/.86 + 128]; };
+let ornStroke = null;
+ornCv.addEventListener('pointerdown', e => {
+  e.preventDefault(); const [x,y] = ornPt(e), g = ornInk.getContext('2d');
+  if(OS.mode !== 'draw'){ OS.mode = 'draw'; syncOrnUI(); }                 // 미리보기를 누르면 바로 꾸미기 시작
+  if(OS.textArm){                                                       // 글씨 넣기
+    const txt = $('ornText').value.trim().slice(0,8); let fs = 46; g.font = `900 ${fs}px "Pretendard","Noto Sans KR",sans-serif`;
+    while(g.measureText(txt).width > 190 && fs > 16){ fs -= 2; g.font = `900 ${fs}px "Pretendard","Noto Sans KR",sans-serif`; }
+    g.globalCompositeOperation = 'source-over'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
+    g.lineWidth = Math.max(3, fs*.16); g.strokeStyle = OS.pen === '#ffffff' ? '#222222' : '#ffffff'; g.strokeText(txt, x, y); g.fillStyle = OS.pen; g.fillText(txt, x, y);
+    OS.textArm = false; $('ornText').value = ''; syncOrnUI(); return;
+  }
+  ornCv.setPointerCapture(e.pointerId); ornStroke = [x,y];
+  g.globalCompositeOperation = OS.erase ? 'destination-out' : 'source-over'; g.strokeStyle = g.fillStyle = OS.pen; g.lineWidth = OS.erase ? 22 : OS.w; g.lineCap = g.lineJoin = 'round';
+  g.beginPath(); g.arc(x, y, g.lineWidth/2, 0, 7); g.fill(); paintOrnPreview();
+});
+ornCv.addEventListener('pointermove', e => { if(!ornStroke) return; const [x,y] = ornPt(e), g = ornInk.getContext('2d');
+  g.beginPath(); g.moveTo(ornStroke[0], ornStroke[1]); g.lineTo(x, y); g.stroke(); ornStroke = [x,y]; paintOrnPreview(); });
+['pointerup','pointercancel'].forEach(ev => ornCv.addEventListener(ev, () => { ornStroke = null; ornInk.getContext('2d').globalCompositeOperation = 'source-over'; }));
+function openOrn(){ if(!nearTree() && ornModal.hidden) return; closePanels(); ornModal.hidden = false; for(const k in keys) delete keys[k]; syncOrnUI(); }
+function closeOrn(){ ornModal.hidden = true; OS.textArm = false; ornStroke = null; }
+$('ornClose').onclick = closeOrn;
+ornModal.addEventListener('pointerdown', e => { if(e.target === ornModal) closeOrn(); });
+ornBtn.onclick = openOrn;
+$('ornHang').onclick = () => {
+  if(!net || !net.orn) return;
+  if(myOrnKeys().length >= ORN_MAX_MINE){ syncOrnMsg(`오너먼트는 한 사람당 ${ORN_MAX_MINE}개까지 달 수 있어요. '내 오너먼트 떼기'로 하나 떼고 달아 주세요.`); return; }
+  const slot = pickSlot(); if(slot < 0){ syncOrnMsg('트리가 오너먼트로 가득 찼어요!'); return; }
+  const o = {ty:OS.ty, col:OS.col, by:me.name, own:ownId(), slot};
+  if(OS.mode === 'draw'){ paintOrnDesign(); const c = document.createElement('canvas'); c.width = c.height = 160; const g = c.getContext('2d');
+    g.fillStyle = OS.ty === 4 ? '#b5733c' : OS.col; g.fillRect(0,0,160,160); g.drawImage(ornDesign, 0, 0, 160, 160);
+    let d = c.toDataURL('image/jpeg', .85); if(d.length > 39000) d = c.toDataURL('image/jpeg', .6); o.img = d; }
+  net.orn.add(o); closeOrn(); popAt('🎄 달았어요!', TREE.x, 3.6, TREE.z + 1.5);
+  ornInk.getContext('2d').clearRect(0,0,256,256); OS.mode = 'def';
+};
+$('ornRemove').onclick = () => { const ks = myOrnKeys(); if(!ks.length || !net || !net.orn) return; net.orn.del(ks[ks.length-1]); syncOrnMsg('가장 최근에 단 오너먼트를 뗐어요.'); };
+syncOrnUI();
+
 /* ---------- 책상 엎기: 책상 옆에서 G → 반대쪽으로 쾅 넘어지고 6초 뒤 제자리 ---------- */
 function flipDesk(i, sgn, vol=1){
   const d = DESK_G[i]; if(!d || d.state) return;
@@ -1152,6 +1679,9 @@ async function initNet(){
         if(Object.keys(del).length) return D.update(chatRef, del);
       }).catch(err => console.error(err));
     };
+    const ornRef = D.ref(db, 'orn');
+    D.onChildAdded(ornRef, s => addOrn(s.key, s.val()), err => { console.error(err); sysChat('오너먼트를 불러올 수 없어요. Realtime Database 규칙을 다시 게시해 주세요.'); });
+    D.onChildRemoved(ornRef, s => removeOrn(s.key));
     const wbRef = D.ref(db, 'board');
     const pruneWb = () => { if(strokes.size <= 400) return; const del = {}; [...strokes.keys()].sort().slice(0, strokes.size - 400).forEach(k => del[k] = null); D.update(wbRef, del).catch(() => {}); };
     D.onChildAdded(wbRef, s => { if(!strokes.has(s.key)) addStrokeLocal(s.key, s.val() || {}); },
@@ -1174,6 +1704,10 @@ async function initNet(){
         add: st => { const r = D.push(wbRef); addStrokeLocal(r.key, st); D.set(r, st).then(pruneWb).catch(err => { console.error(err); strokes.delete(r.key); redrawWb(); sysChat('화이트보드 저장 실패: Realtime Database 규칙을 다시 게시해 주세요.'); }); },
         clear: () => D.set(wbRef, null).catch(err => { console.error(err); sysChat('화이트보드 지우기 실패: 규칙을 다시 게시해 주세요.'); })
       },
+      orn: {
+        add: o => D.push(ornRef, {...o, t: D.serverTimestamp()}).catch(err => { console.error(err); sysChat('오너먼트 저장 실패: Realtime Database 규칙을 다시 게시해 주세요.'); }),
+        del: k => D.remove(D.ref(db, 'orn/'+k)).catch(err => { console.error(err); sysChat('오너먼트 떼기 실패: 규칙을 다시 게시해 주세요.'); })
+      },
       photo: (slot, data) => D.set(D.ref(db, 'photos/'+slot), data ? {...data, t: D.serverTimestamp()} : null)
         .catch(err => { console.error(err); sysChat('사진 저장 실패: Realtime Database 규칙을 다시 게시해 주세요.'); })
     };
@@ -1182,12 +1716,17 @@ async function initNet(){
   const local = {};
   let wbN = 0;
   ch.onmessage = e => { if(e.data.chat) return addChat(e.data.chat);
+    if(e.data.orn){ addOrn(e.data.orn.k, e.data.orn.o); return; } if(e.data.ornDel){ removeOrn(e.data.ornDel); return; }
     if(e.data.wb){ if(e.data.wb.clear){ strokes.clear(); redrawWb(); } else addStrokeLocal(e.data.wb.k, e.data.wb.st); return; } if(e.data.photo){ local[e.data.photo.slot] = e.data.photo.data; return applyPhotos(local); } const {id, data} = e.data; if(data) merge(id, data); else delete players[id]; };
   return {send: d => ch.postMessage({id:me.id, data:d}), leave: () => ch.postMessage({id:me.id, data:null}), chat: m => { ch.postMessage({chat:m}); addChat(m); },
     photo: (slot, data) => { ch.postMessage({photo:{slot, data}}); local[slot] = data; applyPhotos(local); },
     wb: {
       add: st => { const k = Date.now().toString(36) + me.id + (wbN++); ch.postMessage({wb:{k, st}}); addStrokeLocal(k, st); },
       clear: () => { ch.postMessage({wb:{clear:true}}); strokes.clear(); redrawWb(); }
+    },
+    orn: {
+      add: o => { const k = Date.now().toString(36) + me.id + (wbN++); ch.postMessage({orn:{k, o}}); addOrn(k, o); },
+      del: k => { ch.postMessage({ornDel:k}); removeOrn(k); }
     }};
 }
 function merge(id, d){
@@ -1268,10 +1807,11 @@ addEventListener('beforeunload', () => net && net.leave());
 /* ---------- 입력·버튼 ---------- */
 const MOVE = ['arrowup','arrowdown','arrowleft','arrowright','w','a','s','d'];
 // 한글 입력 상태(ㅈㅁㄴㅇ·ㄹ)에서도 동작하도록 글자가 아닌 '키 위치(code)'로 판별
-const CODE = {KeyW:'w',KeyA:'a',KeyS:'s',KeyD:'d',KeyF:'f',KeyG:'g',KeyT:'t',KeyE:'e',KeyX:'x',KeyB:'b',KeyQ:'q',KeyC:'c',Space:' ',ArrowUp:'arrowup',ArrowDown:'arrowdown',ArrowLeft:'arrowleft',ArrowRight:'arrowright'};
+const CODE = {KeyW:'w',KeyA:'a',KeyS:'s',KeyD:'d',KeyF:'f',KeyG:'g',KeyT:'t',KeyE:'e',KeyX:'x',KeyB:'b',KeyQ:'q',KeyC:'c',KeyO:'o',Space:' ',ArrowUp:'arrowup',ArrowDown:'arrowdown',ArrowLeft:'arrowleft',ArrowRight:'arrowright'};
 const kname = e => CODE[e.code] || e.key.toLowerCase();
 addEventListener('keydown', e => {
-  if(!wbModal.hidden){ if(e.key === 'Escape') closeWb(); return; }        // 화이트보드 그리는 중엔 게임 키 막기
+  if(!wbModal.hidden){ if(e.key === 'Escape') closeWb(); return; }
+  if(!ornModal.hidden){ if(e.key === 'Escape') closeOrn(); return; }     // 오너먼트 꾸미는 중엔 게임 키 막기        // 화이트보드 그리는 중엔 게임 키 막기
   if(!joined || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
   if(e.key === 'Enter'){ e.preventDefault(); chatIn.focus(); return; }
   const k = kname(e);
@@ -1281,6 +1821,7 @@ addEventListener('keydown', e => {
   if(k === 'b'){ toggleDance(); return; }
   if(k === 'q'){ openWb(); return; }
   if(k === 'c'){ makeCoffee(); return; }
+  if(k === 'o'){ openOrn(); return; }
   if(k === 'f'){ if(!kick()) punch(); return; }            // 화분 옆이면 차기, 공룡 앞이면 때리기
   if(k === 'g'){ flipNear(); return; }
   if(k === 't'){ throwMine(); return; }
@@ -1295,6 +1836,14 @@ const PITCH0 = Math.atan2(12,11);
 let camYaw = 0, camPitch = PITCH0, drag = null;
 const cvEl = $('c');
 cvEl.addEventListener('pointerdown', e => { drag = {x:e.clientX, y:e.clientY, lx:e.clientX, ly:e.clientY, moved:false}; cvEl.setPointerCapture(e.pointerId); closePanels(); });
+let tipAt = 0;
+cvEl.addEventListener('pointermove', e => {                            // 오너먼트 위에 마우스를 올리면 단 사람 이름 표시
+  if(drag || e.pointerType === 'touch' || performance.now() - tipAt < 80) return; tipAt = performance.now();
+  ray.setFromCamera({x:e.clientX/innerWidth*2-1, y:-(e.clientY/innerHeight)*2+1}, camera);
+  const h = ornHit.length ? ray.intersectObjects(ornHit, false)[0] : null;
+  if(h){ ornTip.hidden = false; ornTip.textContent = `🎄 ${h.object.userData.orn.by || '누군가'} 님의 오너먼트`; ornTip.style.left = e.clientX+'px'; ornTip.style.top = e.clientY+'px'; }
+  else if(!ornTip.hidden) ornTip.hidden = true;
+});
 cvEl.addEventListener('pointermove', e => {
   if(!drag) return;
   if(!drag.moved && Math.hypot(e.clientX-drag.x, e.clientY-drag.y) > 6) drag.moved = true;
@@ -1319,7 +1868,7 @@ $('sit').onclick = () => joined && toggleSit();
 $('lunchBtn').onclick = () => joined && openPanel(lp);
 $('styleBtn').onclick = () => joined && openPanel(sp);
 // 꾸미기: 옷 5종 · 머리 4종 · 상의/하의/머리 색
-const OUTFITS = ['셔츠·바지','블라우스·치마','스웨트셔츠·바지','패딩·바지','반팔·반바지'], HAIRS = ['긴머리','중간머리','단발머리','남자머리'];
+const OUTFITS = ['셔츠·바지','블라우스·치마','스웨트셔츠·바지','패딩·바지','반팔·반바지','환자복'], HAIRS = ['긴머리','중간머리','단발머리','남자머리'];
 function saveLook(){ try{ localStorage.setItem('look', JSON.stringify({outfit:me.outfit, hair:me.hair, color:me.color, bot:me.bot, hcol:me.hcol})); }catch(e){} }
 function chips(el, names, key){
   names.forEach((n,i) => { const b = document.createElement('button'); b.className = 'chip'; b.textContent = n;
@@ -1463,12 +2012,16 @@ function frame(now){
     }
     if(dx || dz){
       const l = Math.hypot(dx,dz), ox = me.x, oz = me.z;
-      const sp = 5*(caffeine(t) ? 1.6 : 1);                                    // 커피 마신 뒤엔 1.6배 빠르게
-      const nx = Math.min(13.5, Math.max(-13.5, me.x + dx/l*sp*dt));
-      const nz = Math.min(17.4, Math.max(-7, me.z + dz/l*sp*dt));
-      if(!blocked(nx, me.z)) me.x = nx;
-      if(!blocked(me.x, nz)) me.z = nz;
-      meMoving = Math.hypot(me.x-ox, me.z-oz) > 1e-4;
+      const sp = 5*(caffeine(t) ? 1.6 : 1), stepLen = sp*dt;                   // 커피 마신 뒤엔 1.6배 빠르게
+      const clampX = v => Math.min(13.5, Math.max(-13.5, v)), clampZ = v => Math.min(17.4, Math.max(-7, v));
+      const stuck = blockedBox(me.x, me.z);                                   // 혹시 물체 안에 끼어 있으면 빠져나올 수 있게 허용
+      let [nx, nz] = pushOut(clampX(me.x + dx/l*stepLen), clampZ(me.z + dz/l*stepLen));
+      nx = clampX(nx); nz = clampZ(nz);
+      if(stuck || !blockedBox(nx, me.z)) me.x = nx;
+      if(stuck || !blockedBox(me.x, nz)) me.z = nz;
+      [me.x, me.z] = pushOut(me.x, me.z); me.x = clampX(me.x); me.z = clampZ(me.z);
+      if(inCircle(me.x, me.z)) me.x = clampX(pushOutX(me.x, me.z));
+      meMoving = Math.hypot(me.x-ox, me.z-oz) > stepLen*.35;                  // 벽에 막혀 거의 못 움직이면 걷는 동작도 멈춤
       if(!meMoving) target = null;
       me.r = lerpAng(me.r, Math.atan2(dx,dz), Math.min(1,dt*14));
     }
@@ -1500,7 +2053,7 @@ function frame(now){
   dinoW *= Math.exp(-dt*4);
   dino.rotation.z = Math.sin(t*28)*.07*dinoW;
   dino.scale.set(1+dinoW*.04, 1-dinoW*.06+Math.sin(t*2)*.004, 1);
-  placeAt(dinoTag, DINO.x, 5.5, DINO.z);
+  placeAt(dinoTag, DINO.x, 5.5, DINO.z); updateTree(dt, t);
   const near = joined && me.seat < 0 && !busy() && nearDino();
   if(hitBtn.hidden === near) hitBtn.hidden = !near;
   const free = joined && me.seat < 0 && !busy(), nw = free && nearWin() >= 0;
@@ -1515,6 +2068,8 @@ function frame(now){
   if(t - lastSky > 1){ lastSky = t; updateSky(); }
   const nwb = nearWb(); if(wbBtn.hidden === nwb) wbBtn.hidden = !nwb;
   const ncf = nearCoffee(); if(cofBtn.hidden === ncf) cofBtn.hidden = !ncf;
+  const nor = nearTree(); if(ornBtn.hidden === nor) ornBtn.hidden = !nor;
+  updateOrns(t);
   updateBrew(dt, t);
   if(joined && me.dance && (meMoving || me.seat >= 0 || busy())){ me.dance = 0; broadcast(true); }   // 움직이거나 앉으면 춤 멈춤
   const dl = me.dance ? '💃 춤 멈추기 (B)' : '💃 춤 (B)'; if(danceBtn.textContent !== dl) danceBtn.textContent = dl;
@@ -1524,7 +2079,7 @@ function frame(now){
   camera.position.set(camX + sy*ce*D, Math.sin(camPitch)*D, camZ + cy*ce*D);
   camera.lookAt(camX - sy, 0, camZ - cy);
   wallsBack.forEach(m => m.visible = camera.position.z > -7.6);          // 벽 바깥으로 돌면 그 벽은 숨김
-  updateGlass(dt, t, camera.position.z > -7.6);
+  updateGlass(dt, t, camera.position.z > -7.6); updateView(t, camera.position.z > -7.6);
   wallL.visible = camera.position.x > -14.6; frames.forEach(f => f.border.visible = f.pic.visible = wallL.visible); wallR.visible = camera.position.x < 14.6; wallF.visible = camera.position.z < 17.8;
   $('count').textContent = `접속 ${fresh().length+(joined?1:0)} / ${MAX}명`;
   renderer.render(scene, camera);
